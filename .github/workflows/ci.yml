@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11.4.0 # keep in sync with web/package.json packageManager
 
