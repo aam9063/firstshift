@@ -1,0 +1,31 @@
+# Harness and editor state
+.atl/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Node / web
+node_modules/
+web/dist/
+coverage/
+playwright-report/
+test-results/
+
+# Environment and secrets
+.env
+.env.local
+*.local
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
