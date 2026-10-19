@@ -3,7 +3,8 @@
 ## Header
 
 - **Objective:** replace HQ's described process with evidence: as-is map, systems and data inventory, seeded mock dataset, re-runnable funnel, pain points and insights.
-- **Status:** in progress
+- **Status:** closed, awaiting human review (PR open)
+- **Next step:** F04 problem-framing after human review.
 - **Branch:** feature/discovery-process-funnel, stacked on feature/discovery-stakeholders-interviews (PR #12) because it cites F02 transcripts.
 
 ## Specs
@@ -42,3 +43,7 @@ Source of truth: `specs/01-discovery.md` sections 4, 5, 6 and 7 plus the baselin
 
 - L1 (user request, verbatim): "continua, ya mergeare despues"
 - L2: Branch stacked on F02 (PR #12 open); when #12 merges, this PR shows only the F03 delta.
+- L3: Evidence (T1, code): RED observed (ModuleNotFoundError for mocks), then 12 passed (`uv run pytest`, includes health and metrics regression); ruff clean; `uv run python -m mocks.funnel` reproduces baseline within tolerance (never contacted 41.0%, median first contact 3.9 d, interview no-show 38.0%, offer-to-shift 9.5 d, day-1 no-show 17.9%, 90-day attrition 52.0%).
+- L4: Evidence (T2-T5): as-is Mermaid passes structural lint (7 subgraphs/7 ends, classDefs consistent, no tabs); external renderer mermaid.ink is down from this environment (HTTP 400 even for trivial diagrams), final render check happens on the GitHub PR view, which renders Mermaid natively; 69 + 48 transcript citations across the four docs all resolve to existing lines (worker grep plus parent spot check, including a false-alarm misattribution check on [T-candidate-a-20] that proved correct).
+- L5: Key finding confirmed with evidence: no system owns the hired-to-rota transition (five-step chain in systems-and-data.md); the seeded funnel's largest time sink is exactly that window (5.1 days median on-rota step).
+- L6: Slice note: total authored lines exceed 4000 because mocks/seed/applications.csv (388 KB, 4500 rows) is generated data pinned byte-identical by test; reviewable code is tests/test_funnel.py, mocks/seed/generate.py and mocks/funnel.py.
