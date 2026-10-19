@@ -14,7 +14,7 @@ services:
       # Langfuse keeps its own database in the same instance
       POSTGRES_MULTIPLE_DATABASES: langfuse
     ports:
-      - "5432:5432"
+      - "5433:5432" # host 5433 to avoid clashing with an existing local Postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -51,7 +51,7 @@ services:
       LANGFUSE_HOST: http://langfuse:3000
       SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
-      - "8000:8000"
+      - "8001:8000" # host 8001 to avoid clashing with an existing local service
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,7 +85,7 @@ services:
       context: ./web
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: http://localhost:8000
+      VITE_API_URL: http://localhost:8001
     ports:
       - "5173:5173"
     depends_on:

@@ -1,0 +1,16 @@
+.venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.atl
+.git
+.env
+web
+ops
+docs
+discovery
+design
+evals
+specs
+odd

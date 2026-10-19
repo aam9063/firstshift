@@ -90,7 +90,7 @@ docker compose up -d --build       # full stack
 | URL | What |
 |---|---|
 | http://localhost:5173 | FirstShift Console (health page in F01) |
-| http://localhost:8000/docs | API (OpenAPI) |
+| http://localhost:8001/docs | API (OpenAPI; the container serves 8000, host port 8001) |
 | http://localhost:3000 | Langfuse |
 | http://localhost:3001 | Grafana (admin / GRAFANA_ADMIN_PASSWORD) |
 | http://localhost:9090 | Prometheus |
