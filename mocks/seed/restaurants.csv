@@ -1,0 +1,16 @@
+restaurant_id,name,city,is_pilot
+R001,Lumbre Burger Sol,Madrid,true
+R002,Lumbre Burger Malasana,Madrid,true
+R003,Lumbre Burger Gran Via,Madrid,true
+R004,Lumbre Burger La Latina,Madrid,true
+R005,Lumbre Burger Chamberi,Madrid,true
+R006,Lumbre Burger Gotico,Barcelona,true
+R007,Lumbre Burger Gracia,Barcelona,true
+R008,Lumbre Burger Eixample,Barcelona,true
+R009,Lumbre Burger Barceloneta,Barcelona,true
+R010,Lumbre Burger Ruzafa,Valencia,true
+R011,Lumbre Burger Ciutat Vella,Valencia,true
+R012,Lumbre Burger Triana,Seville,true
+R013,Lumbre Burger Alameda,Seville,false
+R014,Lumbre Burger Centro,Malaga,false
+R015,Lumbre Burger Soho,Malaga,false
