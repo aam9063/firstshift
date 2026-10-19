@@ -35,11 +35,11 @@ This project runs on gentle-shell (Pi) with ODD as the default protocol.
 | API | FastAPI + Pydantic v2 | Typed contracts, fast to iterate |
 | Persistence | PostgreSQL (Docker) via SQLAlchemy 2 + Alembic | Real migrations, real constraints |
 | Async jobs | Celery + Redis | Scheduled nudges, retries, outbox relay |
-| LLM | Anthropic API with tool use, model configurable via env | Conversation and extraction only |
-| Messaging | Channel port with two adapters: local simulator (default) and Twilio WhatsApp sandbox (optional) | Demo without external dependencies |
+| LLM | OpenAI API through Strands Agents (Python SDK, tool use), model configurable via env (default gpt-4.1-mini) | Conversation and extraction only |
+| Messaging | Channel port with two adapters: local simulator (default) and Twilio WhatsApp | Demo without external dependencies |
 | Tests | pytest, pytest-asyncio, respx for HTTP mocks | |
 | Packaging | uv | |
-| Observability | structlog JSON logs + OpenTelemetry traces (console exporter) | Every conversation turn and integration call is traceable |
+| Observability | Langfuse (LLM traces, prompts, evals) + Grafana stack (Prometheus, Loki) for metrics and logs + Sentry for error tracking | Every conversation turn and integration call is traceable and every error is captured |
 | Console (frontend) | React + TypeScript (strict) on Vite, Tailwind CSS, React Router, TanStack Query and Table, Recharts | HQ oversight, live agent activity and the demo simulator (full spec: `specs/04b-console.md`) |
 | Live updates | Server-Sent Events from FastAPI | Agent turns and integration writes appear in the console in real time |
 | Frontend tests | Vitest + Testing Library + MSW, Playwright for end-to-end flows | |

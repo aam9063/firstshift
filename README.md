@@ -42,7 +42,7 @@ The FDE role is about sitting with a client, understanding how work really happe
 
 | Half | Tech | Who uses it |
 |---|---|---|
-| **Agent backend** | Python, FastAPI, Postgres, Celery, Anthropic API | Candidates and managers, through WhatsApp only |
+| **Agent backend** | Python, FastAPI, Postgres, Celery, Strands Agents on the OpenAI API, Langfuse, Grafana, Sentry | Candidates and managers, through WhatsApp only |
 | **FirstShift Console** | React, TypeScript, Tailwind, Vite | HQ Talent team, DPO, Ops leadership, and the demo |
 
 The console shows every candidate journey, every agent turn and tool call, every write to a client system and every metric, live, and lets a human pause the agents or take over any conversation. Managers never need it: that is a deliberate design constraint from discovery.
