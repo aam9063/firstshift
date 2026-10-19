@@ -78,6 +78,13 @@ Each phase is one or more **ODD features**. The agent explores, resolves only re
 
 Priority if time runs short: a working end-to-end demo with one evaluated iteration beats a wide but shallow build. Phase 6 can stay at "designed + one real adapter + mocks" for the 27th and deepen afterwards for technical rounds.
 
+## Git workflow and CI
+
+- `dev` is the integration branch; all `feature/...` and `fix/...` branches come from it and merge back through pull requests.
+- `main` only receives demo-ready merges from `dev`.
+- CI on every push and PR (`.github/workflows/ci.yml`): backend pytest + ruff + mypy, console vitest + ESLint + tsc + Vite build, and compose config validation. Secret scanning is owned by GitGuardian; secrets never live in the repository (see `env.example`, `.env` is gitignored).
+- Dependabot keeps npm, uv and GitHub Actions dependencies current.
+
 ## Quick start
 
 Everything runs in Docker: both halves plus Langfuse (LLM observability), Grafana + Prometheus (metrics) and the Sentry SDK hook (error tracking via DSN).
