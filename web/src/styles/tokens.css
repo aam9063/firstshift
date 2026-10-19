@@ -1,0 +1,47 @@
+/* FirstShift design tokens mapped from web/DESIGN.md (Mintlify-derived system).
+   Values marked with "provisional" are derived placeholders approved by the human
+   on 2026-10-19 (specs/04b-console.md section 4.1, path 2).
+   Two values are derived from the file itself and are NOT provisional:
+   {colors.brand-green} = rgb(0 212 164), {colors.brand-tag} = rgb(55 114 207). */
+
+@theme {
+  /* Brand and accent */
+  --color-brand-green: rgb(0 212 164);
+  --color-brand-green-deep: rgb(0 169 131); /* provisional */
+  --color-brand-green-soft: rgb(0 212 164 / 0.12); /* provisional */
+  --color-brand-tag: rgb(55 114 207);
+  --color-brand-annotate: rgb(66 154 111); /* provisional */
+  --color-brand-warn: rgb(191 134 52); /* provisional */
+  --color-brand-error: rgb(211 68 67); /* provisional */
+  --color-testimonial-orange: rgb(233 111 81); /* provisional */
+
+  /* Primary CTA pair (DESIGN.md describes it only as "black" / on-black) */
+  --color-primary: rgb(16 16 16); /* provisional */
+  --color-on-primary: rgb(255 255 255); /* provisional */
+
+  /* Surfaces */
+  --color-canvas: rgb(255 255 255);
+  --color-canvas-dark: rgb(9 12 11); /* provisional */
+  --color-surface: rgb(246 248 247); /* provisional */
+  --color-surface-soft: rgb(242 244 243); /* provisional */
+  --color-surface-code: rgb(19 22 21); /* provisional */
+  --color-hairline: rgb(228 231 230); /* provisional */
+  --color-hairline-soft: rgb(238 240 239); /* provisional */
+  --color-hairline-dark: rgb(48 52 51); /* provisional */
+
+  /* Text */
+  --color-ink: rgb(15 18 17); /* provisional */
+  --color-charcoal: rgb(42 46 45); /* provisional */
+  --color-slate: rgb(103 110 108); /* provisional */
+  --color-steel: rgb(138 144 142); /* provisional */
+  --color-stone: rgb(168 173 171); /* provisional */
+  --color-muted: rgb(200 204 203); /* provisional */
+  --color-on-dark: rgb(255 255 255);
+  --color-on-dark-muted: rgb(255 255 255 / 0.64); /* provisional */
+
+  /* Fonts (self-hosted via Fontsource from C1; system fallbacks until then) */
+  --font-sans:
+    "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", Menlo, Consolas, monospace;
+}
