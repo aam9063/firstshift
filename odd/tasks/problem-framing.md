@@ -3,8 +3,8 @@
 ## Header
 
 - **Objective:** turn discovery into a sharp problem definition, measurable targets and explicit constraints, so Phase 3 designs for the real bottleneck and the pilot has signed success criteria.
-- **Status:** in progress
-- **Branch:** feature/problem-framing, stacked on feature/discovery-process-funnel (PR #13, itself stacked on PR #12).
+- **Status:** closed, awaiting human review (PR #14)
+- **Next step:** F05 solution-design: STOP at the decision matrix, that choice is the human's.
 
 ## Specs
 
@@ -41,4 +41,4 @@ Source of truth: `specs/02-problem-framing.md` (all sections). Governing quotes:
 ## Log
 
 - L1 (user request, verbatim): "continua, ya mergeare despues" (F03 CI was green, so F04 proceeds stacked).
-- L2: Evidence (T1-T4): worker produced the seven design/ documents; parent verified template fidelity, number tracing and the no-em-dash rule (see Log L3 for the check outputs).
+- L3: Verification (T5): problem statement matches the exact template with all bold connectors and a traced-number table (26 source references); metric tree derives TTFPS baseline 27.3d (funnel stage medians) and target 14d with visible arithmetic; 7 hypotheses with kill thresholds; 24 constraints; 9 non-goals; 12 assumptions; charter 51 lines. 0 em dashes in design/. Offer-acceptance has no funnel baseline: instrumented-in-pilot commitment marked in metric-tree and H2.
