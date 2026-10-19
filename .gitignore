@@ -22,6 +22,7 @@ test-results/
 # Environment and secrets
 .env
 .env.local
+.env.example
 *.local
 
 # Editors and OS
