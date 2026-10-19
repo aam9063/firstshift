@@ -35,9 +35,9 @@ Two-halves repository setup per AGENTS.md sections 4 and 6 and PROMPTS.md F01. N
 | T2 | S6,S7,S8,S9 | Update AGENTS.md and README stack tables to the decided stack | pending |
 | T3 | S1,S4 | Backend skeleton: uv project, /health with RED first, CORS, pytest/ruff/mypy | pending |
 | T4 | S8 | docker compose full stack: postgres, redis, langfuse, grafana/prometheus/loki, backend, web | pending |
-| T5 | S2,S4,S10 | Console scaffold with provisional tokens.css and health page, RED first | pending |
+| T5 | S2,S4,S10 | Console scaffold with provisional tokens.css and health page, RED first | done |
 | T6 | S1,S2 | Install dependencies both halves; run all checks | pending |
-| T7 | S3 | Makefile + README Quick start (Docker-first) | pending |
+| T7 | S3 | Makefile + README Quick start (Docker-first) | done |
 | T8 | S5 | Close feature with command outputs as evidence | pending |
 
 ## Open questions

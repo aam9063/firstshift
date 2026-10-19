@@ -78,17 +78,39 @@ Each phase is one or more **ODD features**. The agent explores, resolves only re
 
 Priority if time runs short: a working end-to-end demo with one evaluated iteration beats a wide but shallow build. Phase 6 can stay at "designed + one real adapter + mocks" for the 27th and deepen afterwards for technical rounds.
 
-## Quick start (once code exists)
+## Quick start
+
+Everything runs in Docker: both halves plus Langfuse (LLM observability), Grafana + Prometheus (metrics) and the Sentry SDK hook (error tracking via DSN).
 
 ```bash
-docker compose up -d          # postgres + redis
-uv sync                       # python deps
-uv run pytest                 # tests
-uv run fastapi dev app/main.py    # API on :8000 (OpenAPI at /docs)
+cp env.example .env                 # fill in OPENAI_API_KEY and the rest
+docker compose up -d --build       # full stack
+```
 
+| URL | What |
+|---|---|
+| http://localhost:5173 | FirstShift Console (health page in F01) |
+| http://localhost:8000/docs | API (OpenAPI) |
+| http://localhost:3000 | Langfuse |
+| http://localhost:3001 | Grafana (admin / GRAFANA_ADMIN_PASSWORD) |
+| http://localhost:9090 | Prometheus |
+
+Run tests and checks locally (faster than inside Docker):
+
+```bash
+# Backend (Python 3.12, uv)
+uv sync
+docker compose up -d postgres redis    # only what tests need, when DB tests exist
+uv run pytest
+uv run ruff check .
+uv run mypy app
+
+# Console (web/, pnpm)
 cd web
 pnpm install
-pnpm gen:api                       # regenerate API types from the running backend
-pnpm dev                           # console on :5173 (simulator at /simulator)
-pnpm test                          # Vitest
+pnpm test
+cd ..
+
+make up            # alternative to docker compose up -d --build
+make down          # stop
 ```
