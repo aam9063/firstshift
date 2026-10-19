@@ -95,7 +95,14 @@ odd/tasks/       # ODD feature documents
 - Write for a busy reader: lead with the conclusion, then the evidence.
 - Never invent facts about real companies. The client and all its systems are fictional. Public facts about the target company may only appear in `specs/07-handover-and-story.md` and must already be present there.
 
-## 8. Definition of done for any feature
+## 8. Git workflow
+
+- `dev` is the integration branch. Every `feature/...` or `fix/...` branch is created from `dev` and merged back into `dev` through a pull request.
+- `main` only receives merges from `dev` when the state is demo-ready. Direct pushes to `main` or `dev` are not part of the workflow.
+- CI (`.github/workflows/ci.yml`) must be green before merging: backend pytest/ruff/mypy, console vitest/eslint/tsc/build, compose config validation.
+- Secret scanning is owned by GitGuardian (GitHub App). No passwords, API keys or tokens ever live in the repository: configuration arrives through environment variables (`env.example` documents the shape, `.env` is gitignored).
+
+## 9. Definition of done for any feature
 
 - Acceptance criteria in the feature document are checked with evidence.
 - Tests green, lint and types clean (code features).
