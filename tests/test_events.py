@@ -46,8 +46,14 @@ def test_event_envelope_rejects_unknown_type_and_missing_trace() -> None:
     with pytest.raises(ValidationError):
         EventEnvelope(type="made.up.type", trace_id="trc-123", payload={})  # type: ignore[arg-type]
     # F07: agent events are now first-class typed events.
-    assert EventEnvelope(type="agent.turn", trace_id="trc-123", payload={}).type is EventType.AGENT_TURN
-    assert EventEnvelope(type="tool.call", trace_id="trc-123", payload={}).type is EventType.TOOL_CALL
+    assert (
+        EventEnvelope(type="agent.turn", trace_id="trc-123", payload={}).type
+        is EventType.AGENT_TURN
+    )
+    assert (
+        EventEnvelope(type="tool.call", trace_id="trc-123", payload={}).type
+        is EventType.TOOL_CALL
+    )
     with pytest.raises(ValidationError):
         EventEnvelope(type="state.transition", payload={})  # missing trace_id
     with pytest.raises(ValidationError):

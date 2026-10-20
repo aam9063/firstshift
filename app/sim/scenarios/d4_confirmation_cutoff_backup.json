@@ -1,0 +1,101 @@
+{
+  "id": "D4",
+  "name": "Confirmation cutoff: backup from the bench",
+  "proves": "No-show recovery, the bench",
+  "description": "The day-before confirmation never arrives: at the T-18h cutoff the named backup from the bench is activated and the manager is informed, while a late confirmation could still stand the backup down.",
+  "application": {
+    "restaurant_id": "R001",
+    "first_name": "Marc",
+    "phone": "+34600333444",
+    "source": "qr"
+  },
+  "manager": {"id": "mgr-yolanda-001", "name": "Yolanda"},
+  "steps": [
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Sí, doy mi consentimiento",
+      "event": "candidate_consents",
+      "payload": {"channel": "whatsapp", "language": "es"}
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Screening estructurado iniciado",
+      "event": "screening_starts"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Elegible y encaje con turno de cocina",
+      "event": "shift_fit_matched",
+      "snapshot": {"eligibility_ok": true, "shift_fit_ok": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "El miércoles a las 10:00 me viene bien",
+      "event": "slot_selected",
+      "payload": {"slot": {"days": 2, "hours": 2}, "stage": "interview"},
+      "snapshot": {"manager_open_slots": [{"days": 2, "hours": 2}]}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmado, estaré en la entrevista",
+      "event": "interview_attended"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Resumen enviado al manager para su decisión",
+      "event": "decision_requested"
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Aprobar",
+      "event": "approval_recorded",
+      "payload": {
+        "approval": {
+          "manager_id": "mgr-yolanda-001",
+          "manager_name": "Yolanda",
+          "decided_at": {"minutes": 30},
+          "facts_seen": "Resumen de screening y encaje de turno"
+        }
+      }
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Acepto la oferta",
+      "event": "offer_accepted"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Tracker de contrato a rota abierto (O11)",
+      "event": "tracker_opened"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Documentos completos y alta confirmada por el CSV",
+      "event": "tracker_completed",
+      "snapshot": {"documents_complete": true, "csv_confirmed": true}
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Primer turno de cocina el próximo lunes a las 10:00",
+      "event": "first_shift_picked",
+      "payload": {"first_shift_at": {"days": 6, "hours": 2}},
+      "snapshot": {"hygiene_module_complete": true}
+    },
+    {"kind": "clock", "next_timer": true}
+  ],
+  "notes": [
+    "The final clock step jumps to the T-18h confirmation cutoff: the confirmation_cutoff timer (T4, H4) activates the bench backup and the manager is informed.",
+    "The candidate stays first_shift_scheduled with backup_active set, so a late confirmation would stand the backup down (row 24)."
+  ]
+}
