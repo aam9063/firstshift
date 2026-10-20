@@ -76,7 +76,7 @@ CONFIRMATION_STATUSES = ("pending", "confirmed", "unconfirmed")
 CURRENT_BLOCKERS = ("none", "docs_missing", "nomina_pending", "rota_locked", "hygiene_pending")
 BENCH_REASONS = ("silver_medal", "rehire_eligible", "referral")
 BENCH_STATUSES = ("active", "engaged", "hired", "expired", "erased")
-OUTBOX_PORTS = ("hiredesk", "nomina360", "shiftgrid", "learnbite", "m365")
+OUTBOX_PORTS = ("hiredesk", "nomina360", "shiftgrid", "learnbite", "m365", "whatsapp")
 OUTBOX_STATUSES = ("pending", "relaying", "api_confirmed", "csv_confirmed", "failed", "downgraded")
 
 
