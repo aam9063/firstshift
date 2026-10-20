@@ -3,7 +3,8 @@
 ## Header
 
 - **Objective:** Milestone A of specs/04-prototype.md: the thinnest path with no LLM, proving wiring. One candidate flows from webhook to first_shift_scheduled using only mocks, visible in the audit log.
-- **Status:** in progress
+- **Status:** closed, awaiting human review (PR open)
+- **Next step:** F07 agents-and-simulator after human review.
 - **Branch:** feature/walking-skeleton, in worktree backend-infra (separate from the console-ui session).
 
 ## Specs
@@ -30,13 +31,13 @@ Source of truth: specs/04-prototype.md section 1 (Milestone A), design/state-mac
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S1 | DB models + Alembic migration + compose checks | pending |
-| T2 | S2 | Mock services app with routers per system, seeded | pending |
-| T3 | S4 | Core state machine happy path + invariant tests (RED first) | pending |
-| T4 | S6 | Typed event model + audit log append | pending |
-| T5 | S3 | Webhook endpoint + channel gateway first message to simulator | pending |
-| T6 | S5 | Outbox + idempotent relay worker | pending |
-| T7 | S7 | Integration test: scripted candidate reaches first_shift_scheduled; close | pending |
+| T1 | S1 | DB models + Alembic migration + compose checks | done |
+| T2 | S2 | Mock services app with routers per system, seeded | done |
+| T3 | S4 | Core state machine happy path + invariant tests (RED first) | done |
+| T4 | S6 | Typed event model + audit log append | done |
+| T5 | S3 | Webhook endpoint + channel gateway first message to simulator | done |
+| T6 | S5 | Outbox + idempotent relay worker | done |
+| T7 | S7 | Integration test: scripted candidate reaches first_shift_scheduled; close | done |
 
 ## Open questions
 
@@ -46,3 +47,6 @@ Source of truth: specs/04-prototype.md section 1 (Milestone A), design/state-mac
 
 - L1 (user, verbatim): "Ok. La otra sesion me ha sugerido que hagas tu propio worktree para que no os solapeis y no haya conflictos de si esta ha pusheado tal cosa y la otra tambien"
 - L2: Worktree backend-infra created via Orca; main tree left on dev for the console session.
+- L3: Evidence per unit (commit: tests): T1/T4 aebec03 (13 db+events tests, migration 751da69ac6df + 8c41f2b09d73, dev DB migrated and seeded: 15 restaurants, 630 shifts); T2 e6131c0 (18 tests, mocks boot on :8010, Nómina360 200-error-body quirk); T3 3e30031 (55 tests: happy path walk, INV-1..5 property+behavioral, all timers); T5 43d66f8 (5 webhook tests: dedup replay no-op, 422, persisted effects); T6 aad91c9 (5 relay tests incl. the S5 named idempotency test, backoff, dead-letter, skip-locked); T7 3c264d4 (3 integration tests: 12-transition chain new > first_shift_scheduled, audit completeness with actors, relay exactly-once). Final: uv run pytest 111 passed, ruff clean, mypy clean (explicit_package_bases added).
+- L4: Decisions and fixes recorded: outbox_port enum extended with whatsapp (schema gap found by T5 worker, parent applied option A); relay rewritten over ORM Session (Connection.scalars on entity selects yields the first column, a real SQLAlchemy 2 gotcha); MockHireDeskAdapter in tests uses TestClient without context manager (httpx.Client cannot drive ASGITransport sync; entering the context would reseed the store); ScriptedJourney caches core guard facts in memory (no DB columns yet; F07 supersedes); trainer.notify and bench.reserve_backup outbox kinds map to the whatsapp port, shiftgrid.write stays pending until the relay claims that port (F12 scope); FirstShift row for the scheduled shift deferred (outbox + state.transition evidence stand in).
+- L5: Slice note: 11037 authored lines across the feature; six work-unit commits, one per unit, each with tests; review per commit is feasible.
