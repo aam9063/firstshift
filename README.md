@@ -47,6 +47,16 @@ The FDE role is about sitting with a client, understanding how work really happe
 
 The console shows every candidate journey, every agent turn and tool call, every write to a client system and every metric, live, and lets a human pause the agents or take over any conversation. Managers never need it: that is a deliberate design constraint from discovery.
 
+### Console UI status (F05)
+
+The three views from the mockups in `web/public/img` are implemented with mocked data while the backend is built in parallel (feature document: `odd/tasks/console-ui.md`):
+
+- `/` Overview: KPI cards with baseline, target and sparkline, pilot vs control funnel, needs attention strip, recent activity and the 14 day shift coverage table.
+- `/live` Live agent activity: event feed with kind filters, pause and resume, expandable tool call rows (prompt version, model, tokens, schema validation, trace, tool JSON), health and guardrails panels.
+- `/candidates/C-0214` Candidate journey: timeline, candidate and manager threads with inline tool call chips, matched shift and record rail, take over and release flow.
+
+Data is served by `web/src/api/client.ts` from fixtures in `web/src/mocks/`; components never import fixtures. When the FastAPI schema is live, swap the client bodies for real fetches and replace the hand written types in `web/src/api/types.ts` with `pnpm gen:api` output.
+
 ## Phase map
 
 ```mermaid
@@ -96,7 +106,7 @@ docker compose up -d --build       # full stack
 
 | URL | What |
 |---|---|
-| http://localhost:5173 | FirstShift Console (health page in F01) |
+| http://localhost:5173 | FirstShift Console (shell, Overview, Live activity and Candidate journey with mocked data in F05) |
 | http://localhost:8001/docs | API (OpenAPI; the container serves 8000, host port 8001) |
 | http://localhost:3000 | Langfuse |
 | http://localhost:3001 | Grafana (admin / GRAFANA_ADMIN_PASSWORD) |
