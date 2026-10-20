@@ -1,7 +1,5 @@
 import type {
-  AttentionItem,
   CandidateDetail,
-  CoverageRow,
   LiveEvent,
   LiveFeedResponse,
   OverviewResponse,
