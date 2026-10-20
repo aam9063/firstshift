@@ -3,7 +3,8 @@
 ## Header
 
 - **Objective:** add the Recruit, Onboard and Pulse agents on Strands Agents (OpenAI API), the simulator backend with controllable clock and scenario loading, and the typed event stream over SSE. Scenarios D1-D7 as automated tests.
-- **Status:** in progress
+- **Status:** closed, awaiting human review (PR open)
+- **Next step:** F08 eval-harness after human review.
 - **Branch:** feature/agents-simulator (from dev after F06 merged).
 - **Scope split:** backend only; the console UI consumes SSE later (C1, console-ui session).
 
@@ -34,8 +35,8 @@ Source of truth: specs/04-prototype.md sections 2 to 4, specs/04b-console.md sec
 | T1 | S1 | Agent layer: Strands wrapper, model port + scripted/replay impl, tool registry with per-state allow-lists, Pydantic output validation, versioned prompts v1, Langfuse hook | done (ab33af0) |
 | T2 | S3 | Simulator backend: controllable clock, scenario loading, simulator API, simulator channel adapter persistence | done (650f7f4) |
 | T3 | S4 | SSE stream GET /api/events/stream with Last-Event-ID reconnect | done (650f7f4) |
-| T4 | S5 | Scenarios D1-D7 as recorded/replayed automated tests | pending |
-| T5 | S6 | Close: full suite, evidence, PR | pending |
+| T4 | S5 | Scenarios D1-D7 as recorded/replayed automated tests | done (fd362f2) |
+| T5 | S6 | Close: full suite, evidence, PR | done |
 
 ## Open questions
 
@@ -45,4 +46,7 @@ Source of truth: specs/04-prototype.md sections 2 to 4, specs/04b-console.md sec
 
 - L1 (user, verbatim): "Dale. pero una pregunta. El workspace de backend-infra no hace nada, todo esta en esta pestaña"
 - L2: Orca worktree card comment updated to reflect that this session works in the backend-infra directory via cd (the card shows no process because the session was not launched by Orca inside it).
-- L3: T1 evidence: 28 agent tests green (allow-list enforcement G6, Pydantic re-ask, scripted Recruit flow, prompt disclosure G1-G3, Langfuse no-op); model port with ScriptedModel (offline tests) and StrandsOpenAIModel (live, never contacted in tests); 21 tools over the core; agent.turn/tool.call event types added (dec9894, 4bdcf56). Known loud-failure: outbox kind backup.activate has no port value yet (D4 will exercise it; handled with T2/T4 or a schema migration).
+- L3: T1 evidence: 28 agent tests green (allow-list enforcement G6, Pydantic re-ask, scripted Recruit flow, prompt disclosure G1-G3, Langfuse no-op); model port with ScriptedModel (offline tests) and StrandsOpenAIModel (live, never contacted in tests); 21 tools over the core; agent.turn/tool.call event types added (dec9894, 4bdcf56). Known loud-failure resolved: D4 exercised backup.activate through the CHANNEL_KINDS path, no OUTBOX_PORTS extension was needed.
+- L4: T2/T3 evidence: 18 sim/SSE tests; SimClock with persisted offset and next-timer jump; D1-D7 JSON scenarios; sim API per specs/04b §2; SSE with cursor reconnect and heartbeats (polling choice documented). Commit 650f7f4.
+- L5: T4 evidence: 7 scenario tests with scripted agents in the loop via app/sim/agent_loop.py (SimAgentService seeds/writes the run snapshot); D4 backup.activate routed to manager-sim channel, no OUTBOX_PORTS extension needed (CHANNEL_KINDS path); D6 asserts G6 rejection + INV-1; D7 asserts only implemented behavior (erasure request + withdrawn), tombstone gap documented. Commit fd362f2. Final: 164 passed, ruff+mypy clean.
+- L6: Known debt recorded: SimAgentService._apply duplicates ~40 lines of AgentService._apply (only occurred_at differs; fold when surfaces allow); agent turns run through the runner function rather than HTTP (sim API cannot carry scripted replies); every LLM call logs prompt_version/model/latency/tokens per S6 (asserted in agent.turn payloads).
