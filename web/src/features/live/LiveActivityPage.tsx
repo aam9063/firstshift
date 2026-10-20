@@ -280,7 +280,7 @@ export function LiveActivityPage() {
           <ul className="mt-2 space-y-2">
             {meta?.agents.map((agent) => (
               <li key={agent.id} className="flex items-center gap-2 text-body-sm">
-                <input type="checkbox" defaultChecked className="h-3.5 w-3.5 accent-[rgb(16_16_16)]" />
+                <input type="checkbox" defaultChecked className="h-3.5 w-3.5 accent-primary" />
                 <span className="text-ink">{agent.label}</span>
                 <span className="ml-auto font-mono text-micro text-steel">{agent.version}</span>
               </li>

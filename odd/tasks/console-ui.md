@@ -51,7 +51,28 @@ The demo audience and the HQ talent team need the visible proof of oversight and
 ## Progress
 
 - Feature opened 2026-10-20. Branch feature/console-ui created from dev.
+- T1 done (commit feat(console): mock data layer): RED observed for mockStream.test.ts, GREEN with 4 tests, typecheck clean.
+- T2 done (commit feat(console): app shell): 4 shell tests, lint and typecheck clean. Tokens for typography, radius and elevation added to tokens.css from DESIGN.md documented values.
+- T3 done (commit feat(console): overview view): 6 tests.
+- T4 done (commit feat(console): live activity feed): 7 tests, including filter, pause and expand behavior.
+- T5 done (commit feat(console): candidate journey view): 6 tests, including take over and release.
+- T6 done: vitest 29 passed, eslint clean, tsc clean, vite build green, token grep clean (no hex colors, no arbitrary color, radius, font size or shadow values in components).
+
+## Verification evidence
+
+- Commands and results: pnpm test (29 passed), pnpm lint (clean), pnpm typecheck (clean), pnpm build (green). Token grep over web/src/features and web/src/components for hex colors and arbitrary values returned nothing after fixing accent-primary.
+- Visual comparison against the three mockup images is pending: the images live in web/public/img and the implementation follows their transcribed content in web/src/mocks/fixtures.ts. A human pass in the browser (pnpm dev, http://localhost:5173) is the remaining visual check.
+
+## Deviations (recorded with reasons)
+
+- KPI sparklines are inline SVG polylines, not Recharts: six tiny charts per page do not justify the chart runtime. The spec names Recharts for the funnel, time series and comparisons; the funnel here is the paired horizontal bar list from the mockup, rendered as list items for accessibility, not a Recharts chart. Revisit if a time series or comparison chart lands.
+- src/api/types.ts is hand written while the backend session runs in parallel; it is replaced by pnpm gen:api output at integration (recorded in the file header and README).
+- The commit hook reports authored lines per slice above the 400 line guidance; review slices here are one commit per task, which keeps each commit reviewable and testable on its own.
+
+## Open questions
+
+- None blocking. Integration with the real API waits on the backend session (user decision, L3).
 
 ## Next step
 
-T1 mock data layer.
+Human visual pass of the three views against web/public/img (pnpm dev in web/), then open the PR from feature/console-ui to dev. Next feature from PROMPTS.md per the phase map: Phase 4 walking skeleton (webhook to first shift on mocks).
