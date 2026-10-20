@@ -31,7 +31,7 @@ Source of truth: specs/04-prototype.md sections 2 to 4, specs/04b-console.md sec
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S1 | Agent layer: Strands wrapper, model port + scripted/replay impl, tool registry with per-state allow-lists, Pydantic output validation, versioned prompts v1, Langfuse hook | pending |
+| T1 | S1 | Agent layer: Strands wrapper, model port + scripted/replay impl, tool registry with per-state allow-lists, Pydantic output validation, versioned prompts v1, Langfuse hook | done (ab33af0) |
 | T2 | S3 | Simulator backend: controllable clock, scenario loading, simulator API, simulator channel adapter persistence | pending |
 | T3 | S4 | SSE stream GET /api/events/stream with Last-Event-ID reconnect | pending |
 | T4 | S5 | Scenarios D1-D7 as recorded/replayed automated tests | pending |
@@ -45,3 +45,4 @@ Source of truth: specs/04-prototype.md sections 2 to 4, specs/04b-console.md sec
 
 - L1 (user, verbatim): "Dale. pero una pregunta. El workspace de backend-infra no hace nada, todo esta en esta pestaña"
 - L2: Orca worktree card comment updated to reflect that this session works in the backend-infra directory via cd (the card shows no process because the session was not launched by Orca inside it).
+- L3: T1 evidence: 28 agent tests green (allow-list enforcement G6, Pydantic re-ask, scripted Recruit flow, prompt disclosure G1-G3, Langfuse no-op); model port with ScriptedModel (offline tests) and StrandsOpenAIModel (live, never contacted in tests); 21 tools over the core; agent.turn/tool.call event types added (dec9894, 4bdcf56). Known loud-failure: outbox kind backup.activate has no port value yet (D4 will exercise it; handled with T2/T4 or a schema migration).
