@@ -32,8 +32,8 @@ Source of truth: specs/04-prototype.md sections 2 to 4, specs/04b-console.md sec
 | ID | Spec | Task | Status |
 |---|---|---|---|
 | T1 | S1 | Agent layer: Strands wrapper, model port + scripted/replay impl, tool registry with per-state allow-lists, Pydantic output validation, versioned prompts v1, Langfuse hook | done (ab33af0) |
-| T2 | S3 | Simulator backend: controllable clock, scenario loading, simulator API, simulator channel adapter persistence | pending |
-| T3 | S4 | SSE stream GET /api/events/stream with Last-Event-ID reconnect | pending |
+| T2 | S3 | Simulator backend: controllable clock, scenario loading, simulator API, simulator channel adapter persistence | done (650f7f4) |
+| T3 | S4 | SSE stream GET /api/events/stream with Last-Event-ID reconnect | done (650f7f4) |
 | T4 | S5 | Scenarios D1-D7 as recorded/replayed automated tests | pending |
 | T5 | S6 | Close: full suite, evidence, PR | pending |
 
