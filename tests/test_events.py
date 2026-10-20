@@ -64,14 +64,17 @@ def test_event_envelope_json_roundtrip() -> None:
     assert parsed == envelope
 
 
-def test_all_four_skeleton_event_types_exist() -> None:
+def test_typed_event_types_exist() -> None:
     from app.db.events import EventType
 
+    # The four skeleton types (S6) plus the F07 agent events.
     assert {t.value for t in EventType} == {
         "state.transition",
         "integration.write",
         "message.in",
         "message.out",
+        "agent.turn",
+        "tool.call",
     }
 
 
