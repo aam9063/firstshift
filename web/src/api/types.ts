@@ -155,7 +155,7 @@ export interface JourneyStep {
   label: string;
   at: string;
   actorLabel: string;
-  actorType: ActorType;
+  actorType: ActorType | "candidate";
   note?: string;
   current?: boolean;
 }
