@@ -26,9 +26,9 @@ Source of truth: `specs/03-solution-design.md` (all sections). Governing quotes:
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S1 | design/options.md with 8+ options | pending |
-| T2 | S2 | design/decision-matrix.md with weighted scores and rationale | pending |
-| T3 | S3 | STOP: show matrix to the human, record the concept choice | pending |
+| T1 | S1 | design/options.md with 8+ options | done (12) |
+| T2 | S2 | design/decision-matrix.md with weighted scores and rationale | done |
+| T3 | S3 | STOP: show matrix to the human, record the concept choice | done: human approved the full matrix recommendation ("vamos con todo") |
 | T4 | S4 | Phase 2 docs (concept, agents, state machine, architecture, data model, integration contracts, guardrails, ADRs) | pending |
 
 ## Open questions
@@ -39,3 +39,4 @@ Source of truth: `specs/03-solution-design.md` (all sections). Governing quotes:
 
 - L1 (user, verbatim): "console-ui es otra sesion abierta que esta trabajando en el front. Aqui seguimos con backend e infra solo"
 - L2: Phase 1 (T1-T2) delegated to a worker; phase 2 starts only after the human picks the winning combination from the matrix.
+- L3 (human decision, verbatim): "vamos con todo" = approved the matrix recommendation as-is: combined concept of O2 shift-matching + O4 bench + O5 pre-boarding + O6 commitment engine + O7 manager-WhatsApp + O8 check-ins (scoped) + O11 promise-to-payroll tracker + O12 CSV reconciliation gate, with O1 screening as first-contact component, O3 demand-triggered as phase-2, O9 referrals out of pilot, O10 voice as v2.
