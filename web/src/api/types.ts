@@ -51,7 +51,7 @@ export interface AttentionItem {
   ago: string;
 }
 
-export type ActorType = "agent" | "human" | "system";
+export type ActorType = "agent" | "candidate" | "human" | "system";
 
 export interface ActivityItem {
   id: string;
@@ -155,7 +155,7 @@ export interface JourneyStep {
   label: string;
   at: string;
   actorLabel: string;
-  actorType: ActorType | "candidate";
+  actorType: ActorType;
   note?: string;
   current?: boolean;
 }
