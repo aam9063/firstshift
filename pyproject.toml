@@ -48,6 +48,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 files = ["app"]
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = ["celery.*"]
