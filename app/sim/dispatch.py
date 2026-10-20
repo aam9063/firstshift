@@ -388,6 +388,10 @@ def _channel_message(
         recipient_ref = "trainer-sim"
     elif kind == "bench.reserve_backup":
         recipient_ref = "bench-backup-sim"
+    elif kind == "backup.activate":
+        # D4: the bench backup activation informs the manager, who owns the
+        # first shift; the candidate stays convoked (T4, H4).
+        recipient_ref = "manager-sim"
     elif to == "manager":
         recipient_ref = "manager-sim"
     elif to == "area_hrbp":
