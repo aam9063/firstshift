@@ -1,0 +1,109 @@
+{
+  "id": "D2",
+  "name": "Evenings and weekends candidate",
+  "proves": "Hire for shifts, fairness",
+  "description": "Candidate B can only work evenings and weekends: the matcher proposes concrete evening shifts instead of dropping the application for availability.",
+  "application": {
+    "restaurant_id": "R002",
+    "first_name": "Bruno",
+    "phone": "+34600222333",
+    "source": "job_board"
+  },
+  "manager": {"id": "mgr-pablo-002", "name": "Pablo"},
+  "steps": [
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Sí, doy mi consentimiento. Solo puedo trabajar tardes y fines de semana",
+      "event": "candidate_consents",
+      "payload": {"channel": "whatsapp", "language": "es"}
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Screening estructurado iniciado",
+      "event": "screening_starts"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Elegible y encaje con turnos de tarde y fin de semana (no se descarta por disponibilidad)",
+      "event": "shift_fit_matched",
+      "snapshot": {"eligibility_ok": true, "shift_fit_ok": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "El sábado por la tarde me viene bien",
+      "event": "slot_selected",
+      "payload": {"slot": {"days": 2, "hours": -6}, "stage": "interview"},
+      "snapshot": {"manager_open_slots": [{"days": 2, "hours": -6}]}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmado, estaré en la entrevista",
+      "event": "interview_attended"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Resumen enviado al manager: encaja con los turnos de tarde y fin de semana",
+      "event": "decision_requested"
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Aprobar",
+      "event": "approval_recorded",
+      "payload": {
+        "approval": {
+          "manager_id": "mgr-pablo-002",
+          "manager_name": "Pablo",
+          "decided_at": {"minutes": 15},
+          "facts_seen": "Resumen de screening; disponibilidad de tardes y fines de semana con turnos concretos"
+        }
+      }
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Acepto, gracias",
+      "event": "offer_accepted"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Tracker de contrato a rota abierto (O11)",
+      "event": "tracker_opened"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Documentos completos y alta confirmada por el CSV",
+      "event": "tracker_completed",
+      "snapshot": {"documents_complete": true, "csv_confirmed": true}
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Primer turno el sábado por la tarde",
+      "event": "first_shift_picked",
+      "payload": {"first_shift_at": {"days": 5, "hours": -6}},
+      "snapshot": {"hygiene_module_complete": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmo mi primer turno del sábado",
+      "event": "first_shift_confirmed"
+    },
+    {"kind": "clock", "days": 5, "hours": -6},
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Primer turno completado",
+      "event": "shift_worked"
+    }
+  ]
+}

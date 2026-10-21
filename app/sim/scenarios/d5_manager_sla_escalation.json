@@ -1,0 +1,75 @@
+{
+  "id": "D5",
+  "name": "Manager approval SLA escalation",
+  "proves": "SLAs and human oversight",
+  "description": "The manager does not answer the offer approval: reminder at 2 h, escalation to the area HRBP at 8 h, and the approval is recorded only when a named human finally acts.",
+  "application": {
+    "restaurant_id": "R001",
+    "first_name": "Nadia",
+    "phone": "+34600444555",
+    "source": "qr"
+  },
+  "manager": {"id": "mgr-yolanda-001", "name": "Yolanda"},
+  "steps": [
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Sí, doy mi consentimiento",
+      "event": "candidate_consents",
+      "payload": {"channel": "whatsapp", "language": "es"}
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Screening estructurado iniciado",
+      "event": "screening_starts"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Elegible y encaje con turno de till",
+      "event": "shift_fit_matched",
+      "snapshot": {"eligibility_ok": true, "shift_fit_ok": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "El martes a las 12:00 me viene bien",
+      "event": "slot_selected",
+      "payload": {"slot": {"days": 2, "hours": 4}, "stage": "interview"},
+      "snapshot": {"manager_open_slots": [{"days": 2, "hours": 4}]}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmado, estaré en la entrevista",
+      "event": "interview_attended"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Resumen enviado al manager para su decisión",
+      "event": "decision_requested"
+    },
+    {"kind": "clock", "next_timer": true},
+    {"kind": "clock", "next_timer": true},
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Perdona, lo reviso ahora: aprobar",
+      "event": "approval_recorded",
+      "payload": {
+        "approval": {
+          "manager_id": "mgr-yolanda-001",
+          "manager_name": "Yolanda",
+          "decided_at": {"minutes": 5},
+          "facts_seen": "Resumen de screening; decisión tras la escalación de 8 h al HRBP de área"
+        }
+      }
+    }
+  ],
+  "notes": [
+    "The two clock steps jump to the T3 SLA deadlines: manager_decision_remind at 2 h and manager_decision_escalate to the area HRBP at 8 h (H5).",
+    "The approval is recorded after the escalation (row 15); the 8 h SLA breach stays in the audit trail and in the console's escalation queue."
+  ]
+}
