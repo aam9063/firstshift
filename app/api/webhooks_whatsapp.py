@@ -92,6 +92,20 @@ SANDBOX_TEXT_EVENTS = {
     "no": "candidate_opted_out",
 }
 
+# Scripted replies per reached state (specs/04 §2: scripted replies before
+# agents; the F08+ eval loop replaces these with real agent turns).
+STATE_REPLIES: dict[str, str] = {
+    "consented": (
+        "Gracias, {name}. Para buscarte el turno que mejor te va, tres preguntas"
+        " rápidas: 1) ¿Tienes derecho a trabajar en España? 2) ¿Cómo llegarías al"
+        " restaurante? 3) ¿Qué idiomas hablas y qué turnos te van mejor?"
+    ),
+    "withdrawn": (
+        "Entendido, {name}: dejamos de tratarte y tus datos se eliminan según la"
+        " política de conservación. Gracias por tu tiempo."
+    ),
+}
+
 
 def _canonical_url(request: Request) -> str:
     """The full request URL as Twilio signed it.
@@ -332,6 +346,18 @@ async def whatsapp_webhook(
             trace_id=trace_id,
             consent_requested=dispatched_event == "candidate_consents",
         )
+        scripted = STATE_REPLIES.get(result.to_state.value)
+        if scripted:
+            row, outbound = _queue_reply(
+                session,
+                recipient_ref=phone,
+                body=scripted.format(name=candidate.first_name),
+                trace_id=trace_id,
+                scope="candidate",
+                object_id=message_sid,
+                related_entity_id=candidate.id,
+            )
+            _deliver_queued([(row, outbound)])
     else:
         # Nothing could be dispatched: answer with the scripted holding
         # reply so the conversation never dead-ends.

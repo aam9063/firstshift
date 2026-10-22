@@ -339,6 +339,31 @@ def test_consent_keyword_dispatches_through_the_state_machine(
         assert consents[0].granted_at is not None
 
 
+def test_consented_state_gets_the_scripted_screening_reply(
+    client: TestClient, migrated_engine: Engine
+) -> None:
+    """The sandbox never dead-ends: after consent, the scripted reply asks
+    the screening questions through the whatsapp channel (specs/04 §2)."""
+    candidate_id = seed_contacted_candidate(client, "+34600111222")
+    params = twilio_params(Body="Sí")
+
+    response = signed_post(client, params)
+
+    assert response.status_code == 200
+    assert response.json()["state"] == "consented"
+
+    from app.db.models import OutboxMessage
+
+    with Session(migrated_engine) as session:
+        rows = session.scalars(select(OutboxMessage)).all()
+    replies = [r for r in rows if r.port == "whatsapp"]
+    assert any(
+        "tres preguntas" in (r.payload.get("body") or "") and r.status == "api_confirmed"
+        for r in replies
+    ), [r.payload.get("body", "")[:60] for r in replies]
+    assert candidate_id  # the journey is bound to one candidate
+
+
 def test_validation_can_be_disabled_explicitly(
     client: TestClient, migrated_engine: Engine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
