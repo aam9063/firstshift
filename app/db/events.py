@@ -28,6 +28,7 @@ class EventType(StrEnum):
     MESSAGE_OUT = "message.out"
     AGENT_TURN = "agent.turn"
     TOOL_CALL = "tool.call"
+    UNMATCHED_INBOUND = "unmatched.inbound"
 
 
 class EventEnvelope(BaseModel):
