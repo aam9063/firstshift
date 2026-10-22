@@ -23,6 +23,7 @@ from app.agents.tools import ToolDispatcher
 from app.core.state_machine import TRANSITIONS
 from app.db.events import Event
 from app.db.models import Application, AuditEvent, Candidate, Consent, Decision
+from app.services.scripted import INTERNAL_RECIPIENT_REFS
 
 # --------------------------------------------------------------- record shape
 
@@ -365,17 +366,55 @@ def check_ai_disclosure_first_message(record: ConversationAudit) -> CheckResult:
 # ------------------------------------------------- 6. outbound language matches (C-O4)
 
 
+def _first_candidate_inbound_at(events: list[Event]):
+    """When the candidate first spoke (a message.in carrying their own text),
+    or None. The intake first message and the webhook's hiredesk.webhook
+    message.in carry no candidate text, so they never count as a statement.
+    Unannotated on purpose: the checks module imports no I/O or stdlib
+    datetime surface (see tests/test_evals_judge_setup.py purity gate)."""
+    for event in events:
+        if event.type != "message.in":
+            continue
+        payload = event.payload
+        if payload.get("text") or payload.get("body"):
+            return event.occurred_at
+    return None
+
+
 def check_outbound_language_matches(record: ConversationAudit) -> CheckResult:
-    """Every language-tagged outbound message is in the candidate's stated
-    preferred language; the check fails if no message carries a tag."""
+    """Every candidate-facing outbound message sent after the candidate first
+    spoke is in the candidate's stated preferred language (C-O4).
+
+    Non-vacuous since iteration-2: a candidate-facing body must carry a
+    language tag equal to ``candidate.preferred_language``; an untagged body
+    or a mismatched tag is a violation. Messages sent before the candidate's
+    first inbound message use the intake default (es) and cannot contradict a
+    preference not yet stated, so they are tolerated. Bodies addressed to
+    internal roles (trainer, bench backup, manager, HRBP) are not part of the
+    candidate's conversation and are skipped.
+    """
     preferred = record.candidate.preferred_language
     violations: list[str] = []
     tagged = 0
+    stated_at = _first_candidate_inbound_at(record.events)
     for event in record.events:
         if event.type != "message.out":
             continue
-        language = event.payload.get("language")
+        payload = event.payload
+        body = payload.get("body")
+        if not body:
+            continue
+        if payload.get("recipient_ref") in INTERNAL_RECIPIENT_REFS:
+            continue  # internal role: not the candidate's conversation
+        if stated_at is not None and event.occurred_at <= stated_at:
+            continue  # intake default, before the preference was stated
+        language = payload.get("language")
         if language is None:
+            violations.append(
+                f"outbound message at {event.occurred_at} carries a body without a "
+                f"language tag; the candidate's stated language '{preferred}' "
+                "cannot be verified"
+            )
             continue
         tagged += 1
         if language != preferred:
