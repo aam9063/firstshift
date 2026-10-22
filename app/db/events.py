@@ -20,12 +20,15 @@ from app.db.base import Base
 
 
 class EventType(StrEnum):
-    """Skeleton event types (S6). Agent events come in F07."""
+    """Typed event stream types (S4/S6). Agent events added in F07."""
 
     STATE_TRANSITION = "state.transition"
     INTEGRATION_WRITE = "integration.write"
     MESSAGE_IN = "message.in"
     MESSAGE_OUT = "message.out"
+    AGENT_TURN = "agent.turn"
+    TOOL_CALL = "tool.call"
+    UNMATCHED_INBOUND = "unmatched.inbound"
 
 
 class EventEnvelope(BaseModel):

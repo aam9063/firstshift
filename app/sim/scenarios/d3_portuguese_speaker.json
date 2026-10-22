@@ -1,0 +1,112 @@
+{
+  "id": "D3",
+  "name": "Portuguese speaker",
+  "proves": "Multilingual, relevant matching",
+  "description": "Candidate C speaks Portuguese: the conversation runs in Portuguese and the drive-thru shift in the tourist area is flagged as a language fit instead of a barrier.",
+  "application": {
+    "restaurant_id": "R003",
+    "first_name": "Ines",
+    "phone": "+351912345678",
+    "source": "qr"
+  },
+  "manager": {"id": "mgr-marta-003", "name": "Marta"},
+  "steps": [
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Sim, dou o meu consentimento para continuar por WhatsApp",
+      "event": "candidate_consents",
+      "payload": {"channel": "whatsapp", "language": "pt"}
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Triagem estruturada iniciada (em português)",
+      "event": "screening_starts"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Elegível e encaixe com o turno de drive-thru na zona turística: o português é um ajuste de idioma, não uma barreira",
+      "event": "shift_fit_matched",
+      "snapshot": {"eligibility_ok": true, "shift_fit_ok": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "A quinta às 11:00 funciona para mim",
+      "event": "slot_selected",
+      "payload": {"slot": {"days": 3, "hours": 3}, "stage": "interview"},
+      "snapshot": {"manager_open_slots": [{"days": 3, "hours": 3}]}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmado, estarei na entrevista",
+      "event": "interview_attended"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Resumo enviado ao manager: candidata em português para drive-thru em zona turística",
+      "event": "decision_requested"
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Aprobar",
+      "event": "approval_recorded",
+      "payload": {
+        "approval": {
+          "manager_id": "mgr-marta-003",
+          "manager_name": "Marta",
+          "decided_at": {"minutes": 25},
+          "facts_seen": "Resumen de screening en portugués; drive-thru en zona turística con encaje de idioma"
+        }
+      }
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Sim, aceito a oferta",
+      "event": "offer_accepted"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Tracker de contrato a rota abierto (O11)",
+      "event": "tracker_opened"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Documentos completos y alta confirmada por el CSV",
+      "event": "tracker_completed",
+      "snapshot": {"documents_complete": true, "csv_confirmed": true}
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Primer turno en drive-thru el jueves",
+      "event": "first_shift_picked",
+      "payload": {"first_shift_at": {"days": 7}},
+      "snapshot": {"hygiene_module_complete": false}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmo o meu primeiro turno",
+      "event": "first_shift_confirmed"
+    },
+    {"kind": "clock", "days": 7},
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Primeiro turno concluído",
+      "event": "shift_worked"
+    }
+  ],
+  "notes": [
+    "hygiene_module_complete is false: the core's INV-4 fallback schedules the first shift as till/front-of-house with the trainer told. The drive-thru assignment lands once the hygiene module completes."
+  ]
+}

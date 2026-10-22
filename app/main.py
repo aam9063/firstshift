@@ -9,8 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
+from app.api.events_stream import router as events_stream_router
+from app.api.sim import router as sim_router
 from app.api.simulator import router as simulator_router
 from app.api.webhooks import router as webhooks_router
+from app.api.webhooks_whatsapp import router as webhooks_whatsapp_router
 
 
 def create_app() -> FastAPI:
@@ -28,7 +31,10 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(webhooks_router)
+    app.include_router(webhooks_whatsapp_router)
     app.include_router(simulator_router)
+    app.include_router(sim_router)
+    app.include_router(events_stream_router)
 
     @app.get("/health")
     def health() -> dict[str, str]:

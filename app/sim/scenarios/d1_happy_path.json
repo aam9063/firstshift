@@ -1,0 +1,112 @@
+{
+  "id": "D1",
+  "name": "Happy path",
+  "proves": "End-to-end flow, speed, manager in WhatsApp",
+  "description": "Student applies via QR at 21:40, contacted in under a minute, matched to Fri/Sat closes, interview the next day, manager approves from WhatsApp, pre-boarding completes, first shift confirmed and worked.",
+  "application": {
+    "restaurant_id": "R001",
+    "first_name": "Lucia",
+    "phone": "+34600111222",
+    "source": "qr"
+  },
+  "manager": {"id": "mgr-yolanda-001", "name": "Yolanda"},
+  "steps": [
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Sí, doy mi consentimiento para continuar por WhatsApp",
+      "event": "candidate_consents",
+      "payload": {"channel": "whatsapp", "language": "es"}
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Screening estructurado iniciado",
+      "event": "screening_starts"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Elegible y encaje con los turnos de cierre de viernes y sábado",
+      "event": "shift_fit_matched",
+      "snapshot": {"eligibility_ok": true, "shift_fit_ok": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Me viene bien el viernes a las 11:00",
+      "event": "slot_selected",
+      "payload": {"slot": {"days": 1, "hours": 3}, "stage": "interview"},
+      "snapshot": {"manager_open_slots": [{"days": 1, "hours": 3}]}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmado, estaré en la entrevista",
+      "event": "interview_attended"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Resumen enviado al manager para su decisión",
+      "event": "decision_requested"
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Aprobar",
+      "event": "approval_recorded",
+      "payload": {
+        "approval": {
+          "manager_id": "mgr-yolanda-001",
+          "manager_name": "Yolanda",
+          "decided_at": {"minutes": 20},
+          "facts_seen": "Resumen de screening y encaje de turno (closes viernes y sábado)"
+        }
+      }
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "¡Sí, acepto la oferta!",
+      "event": "offer_accepted"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Tracker de contrato a rota abierto (O11)",
+      "event": "tracker_opened"
+    },
+    {
+      "kind": "message",
+      "role": "system",
+      "text": "[Asistente] Documentos completos y alta confirmada por el CSV",
+      "event": "tracker_completed",
+      "snapshot": {"documents_complete": true, "csv_confirmed": true}
+    },
+    {
+      "kind": "message",
+      "role": "manager",
+      "text": "Le asigno el turno de cierre del viernes",
+      "event": "first_shift_picked",
+      "payload": {"first_shift_at": {"days": 6}},
+      "snapshot": {"hygiene_module_complete": true}
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Confirmo que iré a mi primer turno",
+      "event": "first_shift_confirmed"
+    },
+    {"kind": "clock", "days": 6},
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Turno completado, todo genial",
+      "event": "shift_worked"
+    }
+  ],
+  "notes": [
+    "The day-3 Pulse check-in that closes D1 in the demo script needs the agent layer (T1) and is out of this backend scenario's scope."
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "D7",
+  "name": "Data erasure request",
+  "proves": "GDPR erasure path, audit kept without personal data",
+  "description": "The candidate asks to delete their data. The implemented safe path applies immediately: the request is preserved as an observable message, processing stops and the retention clock starts (withdrawn).",
+  "application": {
+    "restaurant_id": "R001",
+    "first_name": "Iker",
+    "phone": "+34600666777",
+    "source": "qr"
+  },
+  "manager": {"id": "mgr-yolanda-001", "name": "Yolanda"},
+  "steps": [
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Antes de seguir: quiero que borréis mis datos personales"
+    },
+    {
+      "kind": "message",
+      "role": "candidate",
+      "text": "Retiro mi consentimiento, no quiero continuar",
+      "event": "candidate_opted_out",
+      "payload": {"channel": "whatsapp", "reason": "erasure_request"}
+    }
+  ],
+  "notes": [
+    "Designed-but-not-implemented gap (feature doc open question): the erased state with a pseudonymized audit tombstone (row 32) arrives with a later feature; this scenario asserts the implemented safe behavior at the contacted state: message.in with the erasure request, processing stopped, retention clock started, audit kept.",
+    "Personal documents are referenced by id and never logged, so the erasure path never needs to rewrite the audit log's content (C-L5)."
+  ]
+}
