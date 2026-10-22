@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** one measured iteration per specs/05 section 4, third gap: the AI disclosure and consent ask repeat after the candidate has already answered.
-- **Status:** in progress
+- **Status:** closed (keep), awaiting review (PR open)
 - **Branch:** feature/iteration-3, stacked on feature/iteration-2 (PR 33 still open).
 
 ## Specs
@@ -30,10 +30,10 @@ Consent capture precedes reply composition on the reply to an outstanding ask: i
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S3 | RED test: a scripted journey must show exactly one consent ask between first contact and screening | pending |
-| T2 | S3 | Implement the consent-before-reply rule in the eval path | pending |
-| T3 | S4 | docs/iteration-log.md iteration-3 entry, eval-v4 measurement (duplicate asks, deterministic checks, judge warmth/clarity) | pending |
-| T4 | S5 | Keep or revert with numbers, close | pending |
+| T1 | S3 | RED test: a scripted journey must show exactly one consent ask between first contact and screening | done |
+| T2 | S3 | Implement the consent-before-reply rule in the eval path | done |
+| T3 | S4 | docs/iteration-log.md iteration-3 entry, eval-v4 measurement (duplicate asks, deterministic checks, judge warmth/clarity) | done |
+| T4 | S5 | Keep or revert with numbers, close | done: KEEP |
 
 ## Open questions
 
@@ -43,3 +43,5 @@ Consent capture precedes reply composition on the reply to an outstanding ask: i
 
 - L1 (user, verbatim): "antes de empezar F11 soluciona A y B" and, in the follow-up choice, "solo las dos iteraciones pendientes" (iteration-3 and iteration-4 before F11).
 - L2: PR 33 (iteration-2) still open when this branch started; it stacks on that branch and reconciles with dev after the merge.
+
+- L3: Measure: duplicate consent asks 44 -> 0 across the full suite (fast subset 20 asks over 10 conversations -> 1 each); deterministic failures 0, every check 44/44; task success 44/44, day-1 show 0.923 unchanged; cost per hire 0.002633 -> 0.002116 USD (one fewer agent turn). Judge means reported, not decision-grade (ScriptedJudge noise, same property as iterations 1-2). Decision KEEP. Parent verified 343 tests, ruff, mypy.

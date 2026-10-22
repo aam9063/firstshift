@@ -448,6 +448,50 @@ def _body(key: str, persona: Persona) -> str:
     return AGENT_BODIES[key][tag].format(name=persona.first_name)
 
 
+def _consent_row_exists(engine: Engine, run: RunRef) -> bool:
+    """Whether a consent record is already stored for this candidate (G2):
+    the consent ask is only composed while none exists."""
+    with Session(engine) as session:
+        row = session.scalar(
+            select(Consent.id).where(Consent.candidate_id == run.candidate_id).limit(1)
+        )
+        return row is not None
+
+
+def _capture_outstanding_consent(engine: Engine, run: RunRef, persona: Persona) -> RunRef:
+    """One change (iteration-3): a candidate reply while a consent ask is
+    outstanding answers it, so consent is captured through the core before
+    the agent composes its next message. The HireDesk first contact sends the
+    consent ask without capturing consent, so without this the scripted reply
+    for ("new", "contacted") asked again before its own capture_consent tool
+    call ran: the candidate saw the same ask twice.
+
+    As before (the capture_consent tool path), the scripted eval treats the
+    candidate's first reply as the consent reply regardless of its wording,
+    and the Consent row mirrors what the tool records (channel, purpose,
+    notice version, simulated timestamp)."""
+    tag = LANGUAGE_TAGS[persona.language.value]
+    run = _dispatch(
+        engine,
+        run,
+        event="candidate_consents",
+        role=ActorKind.CANDIDATE,
+        payload={"channel": "whatsapp", "language": tag},
+    )
+    with Session(engine) as session, session.begin():
+        session.add(
+            Consent(
+                id=uuid4(),
+                candidate_id=run.candidate_id,
+                channel="whatsapp",
+                purpose="screening",
+                notice_version=NOTICE_VERSION,
+                granted_at=_sim_now(engine, run),
+            )
+        )
+    return run
+
+
 def _scripted_reply(engine: Engine, run: RunRef, persona: Persona) -> dict[str, Any]:
     """The recruit agent's scripted reply for the current state (deterministic).
 
@@ -457,7 +501,9 @@ def _scripted_reply(engine: Engine, run: RunRef, persona: Persona) -> dict[str, 
     tag = LANGUAGE_TAGS[persona.language.value]
     state = _current_state(engine, run)
 
-    if state in ("new", "contacted"):
+    # The consent ask is composed only while no consent record exists (G2):
+    # once consent is stored the conversation moves on, it never asks again.
+    if state in ("new", "contacted") and not _consent_row_exists(engine, run):
         return {
             "message": {"body": _body("consent", persona), "language": tag},
             "tool_calls": [
@@ -715,6 +761,14 @@ def drive_conversation(
         last_sent = turn.sent_at
         send_person_turn(engine, run, turn)
         _record_protected_refusal(engine, run, turn.text)
+        run = _refresh(engine, run)
+        # A reply to an outstanding consent ask captures consent first, so the
+        # reply composition below never asks again (iteration-3, G2).
+        if (
+            _current_state(engine, run) == "contacted"
+            and not _consent_row_exists(engine, run)
+        ):
+            run = _capture_outstanding_consent(engine, run, persona)
         run_agent_turn(
             engine,
             _refresh(engine, run),
