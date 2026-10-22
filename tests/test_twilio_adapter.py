@@ -36,6 +36,7 @@ ADAPTER = TwilioChannelAdapter(
     account_sid="ACsubaccount",
     api_key_sid="SKtestkey",
     api_key_secret="testsecret",
+    auth_token=None,
     whatsapp_from="whatsapp:+14155238886",
 )
 MESSAGES_URL = f"{TWILIO_BASE_URL}/2010-04-01/Accounts/ACsubaccount/Messages.json"
@@ -93,6 +94,30 @@ def test_client_error_is_permanent() -> None:
 
     with pytest.raises(TwilioChannelRejectedError):
         ADAPTER.send_message(outbound())
+
+
+@respx.mock
+def test_account_auth_fallback_when_no_api_key() -> None:
+    """A minimal subaccount setup may only have the auth token (S2): the
+    adapter falls back to account SID + token basic auth."""
+    route = respx.post(MESSAGES_URL).mock(
+        return_value=Response(201, json={"sid": "SMfake0002"})
+    )
+    adapter = TwilioChannelAdapter(
+        account_sid="ACsubaccount",
+        api_key_sid=None,
+        api_key_secret=None,
+        auth_token="fallbacktoken",
+        whatsapp_from="whatsapp:+14155238886",
+    )
+
+    sid = adapter.send_message(outbound())
+
+    assert sid == "SMfake0002"
+    encoded = route.calls.last.request.headers["authorization"].removeprefix(
+        "Basic "
+    )
+    assert base64.b64decode(encoded) == b"ACsubaccount:fallbacktoken"
 
 
 def test_selector_uses_twilio_when_subaccount_credentials_are_set(

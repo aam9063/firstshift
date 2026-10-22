@@ -28,6 +28,27 @@ TWILIO_BASE_URL = "https://api.twilio.com"
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
 
+def _basic_auth_for(
+    account_sid: str,
+    api_key_sid: str | None,
+    api_key_secret: str | None,
+    auth_token: str | None,
+) -> tuple[str, str]:
+    """API-key auth (SK sid + secret) when present; account auth otherwise.
+
+    Both authenticate the same REST API; API keys are the recommended
+    credential for subaccounts, but the account SID + auth token pair is
+    equally valid and is what a minimal sandbox setup has on hand.
+    """
+    if api_key_sid and api_key_secret:
+        return (api_key_sid, api_key_secret)
+    if auth_token:
+        return (account_sid, auth_token)
+    raise TwilioChannelError(
+        "twilio credentials missing: set TWILIO_API_KEY_SID + SECRET, or TWILIO_AUTH_TOKEN"
+    )
+
+
 class TwilioChannelError(RuntimeError):
     """Base class for Twilio channel adapter failures."""
 
@@ -47,15 +68,17 @@ class TwilioChannelAdapter:
         self,
         *,
         account_sid: str,
-        api_key_sid: str,
-        api_key_secret: str,
+        api_key_sid: str | None,
+        api_key_secret: str | None,
+        auth_token: str | None,
         whatsapp_from: str,
         base_url: str = TWILIO_BASE_URL,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     ) -> None:
         self._account_sid = account_sid
-        self._api_key_sid = api_key_sid
-        self._api_key_secret = api_key_secret
+        self._basic_auth = _basic_auth_for(
+            account_sid, api_key_sid, api_key_secret, auth_token
+        )
         self._whatsapp_from = whatsapp_from
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
@@ -74,7 +97,7 @@ class TwilioChannelAdapter:
             response = httpx.post(
                 f"{self._base_url}/2010-04-01/Accounts/{self._account_sid}/Messages.json",
                 data={"From": self._whatsapp_from, "To": to, "Body": payload.body},
-                auth=(self._api_key_sid, self._api_key_secret),
+                auth=self._basic_auth,
                 timeout=self._timeout_seconds,
             )
         except httpx.TransportError as exc:
@@ -100,15 +123,15 @@ def select_whatsapp_channel() -> TwilioChannelAdapter | InMemorySimulatorChannel
     (architecture rule 2): Twilio when the subaccount credentials are set,
     the in-process simulator adapter otherwise (the default for tests and
     demos)."""
-    if (
-        settings.twilio_account_sid
-        and settings.twilio_api_key_sid
-        and settings.twilio_api_key_secret
+    if settings.twilio_account_sid and (
+        (settings.twilio_api_key_sid and settings.twilio_api_key_secret)
+        or settings.twilio_auth_token
     ):
         return TwilioChannelAdapter(
             account_sid=settings.twilio_account_sid,
             api_key_sid=settings.twilio_api_key_sid,
             api_key_secret=settings.twilio_api_key_secret,
+            auth_token=settings.twilio_auth_token,
             whatsapp_from=settings.twilio_whatsapp_from,
         )
     from app.adapters.simulator import channel as simulator_channel
