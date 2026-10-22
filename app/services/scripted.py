@@ -85,6 +85,64 @@ _SCRIPTED_BODIES = {
 }
 
 
+# F10 iteration-2 language-aware candidate-facing copy (specs/05 section 4,
+# one measured change; C-O4 language matches candidate).
+#
+# Per-language variants of the seven CANDIDATE_FACING_TEMPLATES. The Spanish
+# entries reuse the Spanish map above (single source of the original copy);
+# Spanish is also the documented last-resort fallback, used only when the
+# candidate's language is genuinely unknown or unsupported. The variants keep
+# the meaning of the Spanish originals, stay WhatsApp-sized and add no
+# promises. Internal-recipient bodies (decision_request and the SIM_BODIES
+# templates) are not candidate-facing and are not translated.
+CANDIDATE_BODY_LANGUAGES = ("es", "pt", "en")
+DEFAULT_CANDIDATE_LANGUAGE = "es"
+
+_CANDIDATE_BODIES: dict[str, dict[str, str]] = {
+    "es": {
+        "offer": _SCRIPTED_BODIES["offer"],
+        "nudge_1": _SCRIPTED_BODIES["nudge_1"],
+        "nudge_2": _SCRIPTED_BODIES["nudge_2"],
+        "interview_reminder": _SCRIPTED_BODIES["interview_reminder"],
+        "bench_reengagement": _SCRIPTED_BODIES["bench_reengagement"],
+        "bench_offer": _SCRIPTED_BODIES["bench_offer"],
+        "rejection": _SCRIPTED_BODIES["rejection"],
+    },
+    "pt": {
+        "offer": "Oferta de emprego da Lumbre Burger: responde SIM para aceitar.",
+        "nudge_1": "Continuamos com a tua candidatura? Responde para continuar.",
+        "nudge_2": "A tua candidatura continua aberta: responde para continuar.",
+        "interview_reminder": "Lembrete da tua entrevista na Lumbre Burger.",
+        "bench_reengagement": "Temos uma nova vaga para ti na Lumbre Burger.",
+        "bench_offer": "Queres ficar na nossa bolsa de emprego?",
+        "rejection": "Obrigado pelo teu interesse: nesta ocasião não continuamos.",
+    },
+    "en": {
+        "offer": "Job offer from Lumbre Burger: reply YES to accept.",
+        "nudge_1": "Shall we continue with your application? Reply to keep going.",
+        "nudge_2": "Your application is still open: reply to keep going.",
+        "interview_reminder": "Reminder of your interview at Lumbre Burger.",
+        "bench_reengagement": "We have a new vacancy for you at Lumbre Burger.",
+        "bench_offer": "Would you like to stay in our talent pool?",
+        "rejection": "Thank you for your interest: this time we will not move forward.",
+    },
+}
+
+
+def candidate_language(preferred_language: str | None) -> str:
+    """The language candidate-facing copy is written in for this candidate:
+    the stated preferred language when supported, Spanish as the documented
+    last resort when it is genuinely unknown or unsupported."""
+    if preferred_language is not None and preferred_language in _CANDIDATE_BODIES:
+        return preferred_language
+    return DEFAULT_CANDIDATE_LANGUAGE
+
+
+def candidate_body(template: str, preferred_language: str | None) -> str | None:
+    """Candidate-facing copy for one template in the candidate's language."""
+    return _CANDIDATE_BODIES[candidate_language(preferred_language)].get(template)
+
+
 # F09 iteration-1 channel-body guard (specs/05 section 4, one measured change).
 #
 # CANDIDATE_FACING_TEMPLATES is the explicit whitelist of outbox templates that
@@ -141,6 +199,10 @@ class _PendingOutbound:
 
     message: OutboundMessage
     template: str
+    # Language the body was written in; None for internal-recipient copy,
+    # which is not candidate-facing (iteration-2 instrumentation: the tag
+    # feeds the outbound_language_matches guardrail).
+    language: str | None = None
 
 
 class ScriptedJourney:
@@ -307,6 +369,11 @@ class ScriptedJourney:
                             "quick_replies": outbound.message.quick_replies,
                             "correlation_id": outbound.message.correlation_id,
                             "template": outbound.template,
+                            **(
+                                {"language": outbound.language}
+                                if outbound.language is not None
+                                else {}
+                            ),
                         },
                         idempotency_key=(
                             f"fs/whatsapp/send/{restaurant_code}/{application.id}/{row_id}"
@@ -371,6 +438,11 @@ class ScriptedJourney:
                             "recipient_ref": matched.message.recipient_ref,
                             "body": matched.message.body,
                             "correlation_id": matched.message.correlation_id,
+                            **(
+                                {"language": matched.language}
+                                if matched.language is not None
+                                else {}
+                            ),
                         }
                     )
             append_event(
@@ -392,7 +464,16 @@ class ScriptedJourney:
             recipient_ref = (
                 "manager-sim" if core_payload.get("to") == "manager" else candidate.phone
             )
-        body = _SCRIPTED_BODIES.get(template)
+        body: str | None
+        language: str | None = None
+        if template in CANDIDATE_FACING_TEMPLATES:
+            # Candidate-facing copy follows the candidate's stated preferred
+            # language (C-O4, iteration-2); the resolved language is carried
+            # on the outbound so the language guardrail can verify it.
+            body = candidate_body(template, candidate.preferred_language)
+            language = candidate_language(candidate.preferred_language)
+        else:
+            body = _SCRIPTED_BODIES.get(template)
         if body is None:
             if is_internal_recipient(kind, recipient_ref):
                 body = INTERNAL_FALLBACK_BODY
@@ -416,6 +497,7 @@ class ScriptedJourney:
                 quick_replies=["Sí", "No"] if template == "first_message" else [],
             ),
             template=template,
+            language=language,
         )
 
 

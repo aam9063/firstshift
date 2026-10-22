@@ -46,8 +46,11 @@ from app.ports.hiredesk import StageUpdate
 from app.ports.messaging import OutboundMessage
 from app.services.scripted import _SCRIPTED_BODIES as SCRIPTED_BODIES
 from app.services.scripted import (
+    CANDIDATE_FACING_TEMPLATES,
     INTERNAL_FALLBACK_BODY,
     _event_type_or_none,
+    candidate_body,
+    candidate_language,
     is_internal_recipient,
 )
 from app.sim.store import RunRef, SimRun, snapshot_from_json, snapshot_to_json
@@ -272,6 +275,11 @@ def _persist_outbox_and_events(
                         "quick_replies": outbound.message.quick_replies,
                         "correlation_id": outbound.message.correlation_id,
                         "template": outbound.template,
+                        **(
+                            {"language": outbound.language}
+                            if outbound.language is not None
+                            else {}
+                        ),
                     },
                     idempotency_key=(
                         f"fs/whatsapp/send/{restaurant_code}/{application.id}/{row_id}"
@@ -345,6 +353,11 @@ def _persist_outbox_and_events(
                         "recipient_ref": matched.message.recipient_ref,
                         "body": matched.message.body,
                         "correlation_id": matched.message.correlation_id,
+                        **(
+                            {"language": matched.language}
+                            if matched.language is not None
+                            else {}
+                        ),
                     }
                 )
         append_event(
@@ -377,6 +390,11 @@ def _persist_outbox_and_events(
                     "recipient_ref": outbound.message.recipient_ref,
                     "body": outbound.message.body,
                     "correlation_id": outbound.message.correlation_id,
+                    **(
+                        {"language": outbound.language}
+                        if outbound.language is not None
+                        else {}
+                    ),
                 },
             ),
         )
@@ -386,9 +404,15 @@ def _persist_outbox_and_events(
 class _PendingOutbound:
     """A channel message built from one core outbox effect."""
 
-    def __init__(self, message: OutboundMessage, template: str) -> None:
+    def __init__(
+        self, message: OutboundMessage, template: str, language: str | None = None
+    ) -> None:
         self.message = message
         self.template = template
+        # Language the body was written in; None for internal-recipient copy,
+        # which is not candidate-facing (iteration-2 instrumentation: the tag
+        # feeds the outbound_language_matches guardrail).
+        self.language = language
 
 
 def _channel_message(
@@ -411,11 +435,19 @@ def _channel_message(
     else:
         recipient_ref = candidate.phone
 
-    body = (
-        SIM_BODIES.get(template)
-        or SIM_BODIES.get(template.replace(".", "_"))
-        or SCRIPTED_BODIES.get(template)
-    )
+    if template in CANDIDATE_FACING_TEMPLATES:
+        # Candidate-facing copy follows the candidate's stated preferred
+        # language (C-O4, iteration-2); the resolved language is carried on
+        # the outbound so the language guardrail can verify it.
+        body = candidate_body(template, candidate.preferred_language)
+        language: str | None = candidate_language(candidate.preferred_language)
+    else:
+        body = (
+            SIM_BODIES.get(template)
+            or SIM_BODIES.get(template.replace(".", "_"))
+            or SCRIPTED_BODIES.get(template)
+        )
+        language = None
     if body is None:
         if is_internal_recipient(kind, recipient_ref):
             # Internal recipients keep receiving a message, but with the
@@ -448,4 +480,5 @@ def _channel_message(
             quick_replies=quick_replies,
         ),
         template=template,
+        language=language,
     )

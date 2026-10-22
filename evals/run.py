@@ -332,7 +332,10 @@ def _start_run(engine: Engine, persona: Persona) -> RunRef:
             application_id=str(application.id),
             state=State(application.state),
             notice_version=NOTICE_VERSION,
-            language="es",
+            # The persona's language, not a literal: the core snapshot carries
+            # the candidate's language from intake on (iteration-2), so the
+            # language guardrail measures the candidate's real language.
+            language=LANGUAGE_TAGS[persona.language.value],
             contacted_at=base_at,
             # The only world fact seeded up front: the manager's open slot.
             manager_open_slots=(base_at + MANAGER_SLOT_OFFSET,),
