@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** one measured iteration per specs/05 section 4, second gap: language drift between the candidate's stated language and the copy the agent sends.
-- **Status:** in progress
+- **Status:** closed (keep), awaiting review (PR open)
 - **Branch:** feature/iteration-2, from dev (5040319, after iteration-1 merged).
 
 ## Specs
@@ -31,11 +31,11 @@ Language-aware candidate-facing copy, end to end: per-language variants of the s
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S3 | Per-language candidate-facing templates (es/pt/en) in both dispatch paths, plus snapshot language from the persona | pending |
-| T2 | S2 | Make the language guardrail non-vacuous: a RED test with a Portuguese candidate proves the check fails on Spanish-only copy | pending |
-| T3 | S2,S4 | docs/iteration-log.md iteration-2 entry with hypothesis and numbers | pending |
-| T4 | S4 | Fast then full suite seed 42, label v3; report before/after (drift count, judge language score) | pending |
-| T5 | S5 | Keep or revert with numbers, close | pending |
+| T1 | S3 | Per-language candidate-facing templates (es/pt/en) in both dispatch paths, plus snapshot language from the persona | done |
+| T2 | S2 | Make the language guardrail non-vacuous: a RED test with a Portuguese candidate proves the check fails on Spanish-only copy | done |
+| T3 | S2,S4 | docs/iteration-log.md iteration-2 entry with hypothesis and numbers | done |
+| T4 | S4 | Fast then full suite seed 42, label v3; report before/after (drift count, judge language score) | done |
+| T5 | S5 | Keep or revert with numbers, close | done: KEEP |
 
 ## Open questions
 
@@ -45,3 +45,5 @@ Language-aware candidate-facing copy, end to end: per-language variants of the s
 
 - L1 (user, verbatim): "dale"
 - L2: PR 32 (iteration-1) merged as 5040319 before starting; root cause located by reading both dictionaries and the snapshot construction.
+
+- L3: Measure: exact-template drift 25 messages to 4 (post-statement 21 to 0); the 4 remaining are pre-statement nudges, the designed intake default tolerated by the non-vacuous guardrail; deterministic failures 0 with outbound_language_matches 44/44; task success, day-1 show and cost per hire unchanged. Decision KEEP on the exact metric. Parent verified 341 tests, ruff and mypy (the worker's 126 was a partial run). Commit 23c8219.
