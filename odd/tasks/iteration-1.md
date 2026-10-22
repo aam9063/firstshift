@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** one measured iteration per specs/05 section 4: pick the single largest gap, state the hypothesis, change one thing, measure with the same seed, keep or revert, publish eval-v2.
-- **Status:** in progress
+- **Status:** closed (keep), awaiting review (PR open)
 - **Branch:** feature/iteration-1, stacked on feature/eval-harness (PR 30 still open).
 
 ## Specs
@@ -34,12 +34,12 @@ We believe rejecting internal-identifier bodies at the channel boundary (a white
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S3 | RED test: an unknown/internal template must never become candidate-facing text | pending |
-| T2 | S3 | Implement the channel-body guard (whitelist + internal recipients + no candidate fallback) | pending |
-| T3 | S1 | New deterministic check for internal identifiers (with a violating fixture) | pending |
-| T4 | S2 | docs/iteration-log.md with the hypothesis in the required form | pending |
-| T5 | S4 | Fast then full suite with seed 42, label v2, live judge on the full set | pending |
-| T6 | S5 | Decide keep/revert, publish eval-v2, close | pending |
+| T1 | S3 | RED test: an unknown/internal template must never become candidate-facing text | done |
+| T2 | S3 | Implement the channel-body guard (whitelist + internal recipients + no candidate fallback) | done |
+| T3 | S1 | New deterministic check for internal identifiers (with a violating fixture) | done |
+| T4 | S2 | docs/iteration-log.md with the hypothesis in the required form | done |
+| T5 | S4 | Fast then full suite with seed 42, label v2 | done (scripted judge; live judge measured separately in the calibration report) |
+| T6 | S5 | Decide keep/revert, publish eval-v2, close | done: KEEP |
 
 ## Open questions
 
@@ -50,3 +50,5 @@ We believe rejecting internal-identifier bodies at the channel boundary (a white
 - L1 (user, verbatim): "porque sigue el archivo de calibration en dev sin commitear? o ya lo has metido tu por otro lado?"
 - L2: PR 30 CI green on e00edae; iteration starts stacked on it because the eval runner and judge live there.
 - L3: Root cause located at app/sim/dispatch.py::_channel_message fallback; the same pattern exists in app/services/scripted.py for scripted journeys (checked there too).
+
+- L4: Measure: leaks 39/44 (eval-v1) to 0/44 (eval-v2), fast subset 8/10 to 0/10, deterministic failures 0, task success 1.0, day-1 show 0.923, cost per hire unchanged. Decision KEEP on the deterministic metric; judge mean 2.768 to 2.945-3.009 is directional only because identical seed-42 runs vary (sim clocks anchor to wall-clock). Verified by the parent: 329 tests, ruff and mypy clean. Commit 5b2275e, merge 0419ada.

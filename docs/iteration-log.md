@@ -76,7 +76,12 @@ Runner: `uv run python -m evals.run --suite <suite> --seed 42 --label v2`.
 
 ### Decision
 
-(placeholder: keep, revert or refine, with the numbers)
+**Keep.** The single change moved the deterministic guardrail from 39 leak-carrying conversations in eval-v1 to 0 in eval-v2 (fast subset 8/10 to 0/10), with deterministic failures at 0, task success at 1.0, day-1 show rate at 0.923 and cost per hire at 0.002633 USD all unchanged. The judge mean rose from 2.768 to 2.945-3.009, but that number is not the basis of this decision: the run-to-run variation across identical seed-42 runs (2.945-3.009) is wider than a single iteration could claim, so the keep rests on the deterministic metric, which is exact and reproducible. Reverting is not justified: no configured message copy changed (PRESERVE tests pin the exact bodies) and the only behavioural delta is that a candidate-facing kind without configured copy is suppressed and logged instead of leaking its identifier.
+
+Follow-up work this measurement exposed, outside the one-change rule:
+
+- Harness reproducibility: the judge mean should be stable for identical code and seed. The simulated clocks anchor to wall-clock start, so conversations differ slightly between runs. Candidate: derive the sim base time from the seed.
+- `evals/.cache` judge cache entries from these runs are gitignored and do not affect CI.
 
 ## Candidates for iteration-2
 
