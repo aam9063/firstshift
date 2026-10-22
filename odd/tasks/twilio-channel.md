@@ -30,7 +30,7 @@
 | T1 | S3,S5,S6 | POST /webhooks/whatsapp: signature validation, MessageSid dedup, phone lookup, message.in, dispatch | done (2cbb402 + 1a2ff20) |
 | T2 | S2,S3 | TwilioChannelAdapter (REST send with subaccount creds) + relay wiring | done (2cbb402) |
 | T3 | - | cloudflared tunnel running; env.example + README sandbox setup section | done: tunnel live, env.example updated; README section pending F12 |
-| T4 | - | Close with live sandbox smoke test evidence | done: tunnel round-trip with signed request (unmatched path), replay dedup 200 replayed, invalid signature 403; real WhatsApp test pending user subaccount creds |
+| T4 | - | Close with live sandbox smoke test evidence | done: full consent loop verified live (user WhatsApp: hola -> holding reply with AI disclosure; Sí -> Consent row + consented state + scripted screening questions reply delivered via Twilio REST) |
 
 ## Open questions
 
@@ -42,4 +42,6 @@
 - L2: Parent decision given to user: subaccount (not bare API key) for real separation; API Key inside the subaccount; credits draw from the parent balance; each subaccount has its own WhatsApp sandbox and join code.
 - L3: Running stack observed: firstshift backend on host 8001 (container stale from F01; local uvicorn used for the tunnel until rebuilt), tri-coach on 8000 (other project), cloudflared 2026.9.3 available.
 - L4: Smoke test evidence (through the live tunnel): signed request -> 200 unmatched_inbound; same MessageSid replayed -> 200 replayed; forged signature -> 403. Smoke found a real bug: dedup only checked message.in so unmatched-path replays duplicated events; fixed by deduping on both message.in and unmatched.inbound (1a2ff20) and promoting unmatched.inbound to EventType.
-- L5: Remaining for the real sandbox: user creates the Twilio subaccount and fills .env (subaccount SID, API key SID/secret, auth token), joins the sandbox from their WhatsApp, points the sandbox webhook at the tunnel URL, and restarts the backend. Then a real WhatsApp message from a known candidate phone exercises the candidate path (D1-style).
+- L5: Remaining for the real sandbox: user creates the Twilio subaccount and fills .env (subaccount SID, auth token), joins the sandbox, points the sandbox webhook at the tunnel URL, and restarts the backend. DONE by the user (L6).
+- L6: Live smoke session findings (all fixed during the session): (1) dedup gap on the unmatched path, (2) .env had main-account creds (SID prefix check caught it), (3) three servers fighting over port 8001 (stale docker container restarted + stray uvicorn on ::1; netstat audit and cleanup), (4) no scripted reply after consent (candidates went silent; STATE_REPLIES per state added, 0273746), (5) adapter now supports account SID + auth token auth fallback (fbbc6fa) since minimal sandbox setups lack API keys. Final live evidence: user WhatsApp screenshot, consent -> scripted screening reply delivered.
+- L7: Known demo limits: free text still answers the holding reply (only si/no map to core events; LLM in the loop arrives with the eval/agent live mode), replies use the scripted templates, tunnel URL rotates on restart (named tunnel for the demo), README sandbox section deferred to F12.
