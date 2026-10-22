@@ -47,7 +47,13 @@ def test_build_tracer_without_keys_is_a_noop(
     # Explicitly absent keys: ambient .env values must not leak into the test.
     monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "")
     monkeypatch.setenv("LANGFUSE_SECRET_KEY", "")
-    tracer = build_tracer(Settings(llm_mode="scripted", langfuse_public_key=None, langfuse_secret_key=None))
+    tracer = build_tracer(
+        Settings(
+            llm_mode="scripted",
+            langfuse_public_key=None,
+            langfuse_secret_key=None,
+        )
+    )
     assert isinstance(tracer, NullTracer)
 
 
