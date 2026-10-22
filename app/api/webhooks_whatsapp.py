@@ -220,7 +220,9 @@ async def whatsapp_webhook(
     # append-only event stream; a replayed delivery creates nothing.
     seen = session.scalar(
         select(Event.id).where(
-            Event.type == EventType.MESSAGE_IN.value,
+            Event.type.in_(
+                [EventType.MESSAGE_IN.value, EventType.UNMATCHED_INBOUND.value]
+            ),
             Event.payload["provider_message_id"].astext == message_sid,
         )
     )
@@ -240,7 +242,7 @@ async def whatsapp_webhook(
         session.execute(
             insert(Event).values(
                 id=uuid4(),
-                type="unmatched_inbound",
+                type=EventType.UNMATCHED_INBOUND.value,
                 occurred_at=now,
                 candidate_id=None,
                 trace_id=trace_id,

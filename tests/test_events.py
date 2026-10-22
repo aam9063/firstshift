@@ -84,6 +84,7 @@ def test_typed_event_types_exist() -> None:
         "message.out",
         "agent.turn",
         "tool.call",
+        "unmatched.inbound",
     }
 
 

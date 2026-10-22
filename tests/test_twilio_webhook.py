@@ -259,11 +259,22 @@ def test_unknown_phone_gets_holding_reply_and_unmatched_event(
 
     with Session(migrated_engine) as session:
         unmatched = session.scalars(
-            select(Event).where(Event.type == "unmatched_inbound")
+            select(Event).where(Event.type == "unmatched.inbound")
         ).all()
     assert len(unmatched) == 1
     assert unmatched[0].payload["provider_message_id"] == params["MessageSid"]
     assert unmatched[0].payload["from"] == "+34699999999"
+
+    # S3: a replayed delivery of the same MessageSid is a no-op, even on the
+    # unmatched path (the holding reply must not repeat either).
+    replay = signed_post(client, params)
+    assert replay.status_code == 200
+    assert replay.json()["status"] == "replayed"
+    with Session(migrated_engine) as session:
+        unmatched = session.scalars(
+            select(Event).where(Event.type == "unmatched.inbound")
+        ).all()
+    assert len(unmatched) == 1
     assert "text" not in unmatched[0].payload
 
     # A polite holding reply is queued through the whatsapp port.
