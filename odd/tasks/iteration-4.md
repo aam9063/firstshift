@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** one measured iteration per specs/05 section 4, fourth gap: the screening message asks three questions at once.
-- **Status:** in progress
+- **Status:** closed (keep), awaiting review (PR open)
 - **Branch:** feature/iteration-4, stacked on feature/iteration-3 (PR 34 open).
 
 ## Specs
@@ -30,10 +30,10 @@ Screening becomes three turns, one question each: the flow stays in `consented` 
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S3 | RED test: no conversation contains a message asking more than one screening question; three question turns in order | pending |
-| T2 | S3 | Implement the one-question-per-turn screening flow in the eval path | pending |
-| T3 | S4 | docs/iteration-log.md iteration-4 entry, eval-v5 measurement (multi-question count, deterministic checks, judge clarity/brevity) | pending |
-| T4 | S5 | Keep or revert with numbers, close | pending |
+| T1 | S3 | RED test: no conversation contains a message asking more than one screening question; three question turns in order | done |
+| T2 | S3 | Implement the one-question-per-turn screening flow in the eval path | done |
+| T3 | S4 | docs/iteration-log.md iteration-4 entry, eval-v5 measurement (multi-question count, deterministic checks, judge clarity/brevity) | done |
+| T4 | S5 | Keep or revert with numbers, close | done: KEEP |
 
 ## Open questions
 
@@ -43,3 +43,5 @@ Screening becomes three turns, one question each: the flow stays in `consented` 
 
 - L1 (user, verbatim): "antes de empezar F11 soluciona A y B" with the chosen scope "solo las dos iteraciones pendientes".
 - L2: Stacks on feature/iteration-3 because PR 34 is still open; reconciles with dev after its merge.
+
+- L3: Measure: multi-question conversations 44/44 -> 0/44 (fast subset 10/10 -> 0/10); deterministic failures 0, every check 44/44; task success 44/44; day-1 show 0.923 and 39 hires unchanged; cost per hire 0.002116 -> 0.002939 USD (two extra agent turns per conversation, the intended cost of one question per turn); judge clarity 2.705 -> 2.977 and brevity 3.227 -> 3.114 (within the ScriptedJudge run-to-run spread, reported not decision-grade). Decision KEEP on the deterministic count. Parent verified 356 tests, ruff and mypy. Noise-run artifacts eval-v5b.* deleted; only eval-v5 committed.
