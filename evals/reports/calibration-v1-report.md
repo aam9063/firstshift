@@ -1,8 +1,10 @@
 # Judge calibration report v1
 
-- **Judge:** live, OpenAI `gpt-4.1-mini`, rubric version `v1` (clarity, warmth, brevity, language, honesty).
+- **Date:** 2026-10-22
+- **Judge:** live, OpenAI `gpt-4.1-mini`, temperature 0, rubric version `v1` (clarity, warmth, brevity, language, honesty).
 - **Labels:** 15 conversations x 5 criteria, hand-labeled by the project owner (genuine human labels, worksheet `evals/reports/calibration-v1.md`).
 - **Run:** `uv run python -m evals.judge.calibration score --judge live --report evals/reports/eval-v1.json`.
+- **Scope note:** this calibration measures the live judge. The eval-v1 and eval-v2 reports themselves run the deterministic `scripted-judge/v0` so CI never depends on a network model; the two numbers must not be compared as if they came from the same judge.
 
 ## Agreement
 
@@ -35,6 +37,8 @@ Per-conversation pairs (human/judge) show a systematic direction:
 ## Decision
 
 The judge stays as the stricter reference. Calibrating the judge down to match a lenient human scale would hide the defects the judge is catching, including the language drift and the internal token leak. What changes is the agent, not the judge: the next iteration fixes the defects that both the judge and the deterministic checks can see.
+
+**Follow-up (iteration-1, `docs/iteration-log.md`):** the internal token leak this report exposed was fixed under the single-change rule and measured: conversations carrying an internal identifier fell from 39 of 44 in eval-v1 to 0 of 44 in eval-v2, with deterministic failures still at zero and task success, day-1 show rate and cost per hire unchanged. The remaining defects named above (language drift, verbatim repeated disclosure, three questions in one message) are iteration-2 candidates.
 
 ## Honest limitations
 
