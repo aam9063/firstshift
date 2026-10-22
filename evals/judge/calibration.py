@@ -14,14 +14,17 @@ judge on 15 hand-labeled conversations first and report agreement".
 
 from __future__ import annotations
 
+import argparse
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from evals.judge.port import ConversationTranscript, JudgePort, ScriptedJudge
-from evals.judge.rubrics import Rubric
+from evals.judge.port import ConversationTranscript, ConversationTurn, JudgePort, ScriptedJudge
+from evals.judge.rubrics import Rubric, load_all_rubrics
 
 CALIBRATION_CONVERSATIONS = 15
+DEFAULT_REPORTS_DIR = Path("evals/reports")
 
 _CRITERIA_ORDER = ("clarity", "warmth", "brevity", "language", "honesty")
 _CONVERSATION_RE = re.compile(r"^##\s+Conversation\s+(\S+)\s*$", re.MULTILINE)
@@ -195,3 +198,111 @@ def agreement(rows: list[CalibrationRow]) -> AgreementResult:
         within_1_rate=within / len(counted),
         per_criterion=tuple(per_criterion),
     )
+
+
+# --------------------------------------------------------------- the CLI
+
+
+def _latest_report(reports_dir: Path) -> Path:
+    """The most recently written eval report JSON in the reports directory."""
+    candidates = sorted(reports_dir.glob("eval-*.json"), key=lambda p: p.stat().st_mtime)
+    if not candidates:
+        raise FileNotFoundError(
+            f"no eval-*.json report in {reports_dir}: run `python -m evals.run` first"
+        )
+    return candidates[-1]
+
+
+def _transcripts_from_report(report_path: Path) -> list[ConversationTranscript]:
+    """The judged conversations of an eval report, as plain transcripts."""
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    transcripts: list[ConversationTranscript] = []
+    for conversation in payload.get("conversations", []):
+        transcripts.append(
+            ConversationTranscript(
+                conversation_id=str(conversation["conversation_id"]),
+                turns=tuple(
+                    ConversationTurn(role=str(turn["role"]), text=str(turn["text"]))
+                    for turn in conversation.get("transcript", [])
+                ),
+                language=conversation.get("language"),
+            )
+        )
+    if not transcripts:
+        raise ValueError(f"report {report_path} carries no conversations with transcripts")
+    return transcripts
+
+
+def _agreement_markdown(result: AgreementResult) -> str:
+    """The agreement report: exact and within-1 rates, overall and per criterion."""
+    lines = [
+        "# Judge calibration agreement",
+        "",
+        f"{result.n} scored cell(s); exact agreement {result.exact_rate:.0%}, "
+        f"within-1 agreement {result.within_1_rate:.0%}.",
+        "",
+        "| criterion | n | exact | within 1 |",
+        "| --- | --- | --- | --- |",
+    ]
+    for entry in result.per_criterion:
+        lines.append(
+            f"| {entry.criterion} | {entry.n} | {entry.exact_rate:.0%} | "
+            f"{entry.within_1_rate:.0%} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`python -m evals.judge.calibration emit|score` (S4).
+
+    emit: write the 15-conversation labeling worksheet from the latest (or
+    named) eval report; the judge column is pre-filled with the deterministic
+    judge so agreement is computable the moment the human column is filled.
+    score: read the filled worksheet back and report human-judge agreement.
+    """
+    parser = argparse.ArgumentParser(
+        prog="python -m evals.judge.calibration",
+        description="Judge calibration worksheet and agreement (S4).",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    emit = subparsers.add_parser("emit", help="write the labeling worksheet")
+    emit.add_argument("--report", type=Path, default=None,
+                      help="eval report JSON (default: newest in evals/reports)")
+    emit.add_argument("--out", type=Path, default=DEFAULT_REPORTS_DIR / "calibration-v1.md")
+    emit.add_argument("--count", type=int, default=CALIBRATION_CONVERSATIONS,
+                      help="conversations to include (spec: 15)")
+
+    score = subparsers.add_parser("score", help="compute human-judge agreement")
+    score.add_argument("--worksheet", type=Path, required=True)
+    score.add_argument("--out", type=Path, default=None,
+                      help="write the agreement markdown here (default: stdout)")
+
+    args = parser.parse_args(argv)
+    if args.command == "emit":
+        report_path = args.report or _latest_report(DEFAULT_REPORTS_DIR)
+        transcripts = _transcripts_from_report(report_path)[: args.count]
+        worksheet = emit_worksheet(
+            transcripts, list(load_all_rubrics()), path=args.out
+        )
+        print(f"wrote worksheet for {len(transcripts)} conversation(s) to {worksheet}")
+        if len(transcripts) < CALIBRATION_CONVERSATIONS:
+            print(
+                f"note: {len(transcripts)} of {CALIBRATION_CONVERSATIONS} calibration "
+                "conversations available; run a bigger suite for the full worksheet"
+            )
+        return 0
+
+    rows = load_worksheet(args.worksheet)
+    result = agreement(rows)
+    report_md = _agreement_markdown(result)
+    if args.out is None:
+        print(report_md, end="")
+    else:
+        args.out.write_text(report_md, encoding="utf-8")
+        print(f"wrote agreement report to {args.out}")
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())

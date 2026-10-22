@@ -411,3 +411,31 @@ def test_persona_turn_defaults_are_deterministic() -> None:
     assert one.delay == two.delay
     epoch = datetime(2025, 7, 1, 9, 0, tzinfo=UTC)
     assert one.sent_at is not None and one.sent_at > epoch
+
+
+# ------------------------------------------- every seeded persona can reply (T3)
+
+
+def test_every_seeded_persona_answers_a_pay_reply_without_keyerror() -> None:
+    """F08 T3 regression: no (availability, language) combination of the seed-42
+    persona set may raise when the system reply answers pay (the branch that
+    looks up AVAILABILITY_LINES). Found as KeyError ('weekday_mornings', 'mixed')
+    and friends: the mixed-language availability templates were missing."""
+    pay_reply = outbound("El turno de cocina paga 12 euros por hora.")
+    for persona in PERSONAS:
+        sim = CandidateSimulator(persona)
+        assert sim.next_turn() is not None
+        sim.observe_outbound(pay_reply)
+        second = sim.next_turn()  # must not raise, whatever the axes
+        assert second is not None, persona.persona_id
+        assert second.text.strip() != "", persona.persona_id
+
+
+def test_availability_templates_cover_every_axis_combination() -> None:
+    """The template table itself is total over the persona axes."""
+    from evals.personas.schema import AvailabilityBand, Language
+    from evals.personas.simulator import AVAILABILITY_LINES
+
+    for band in AvailabilityBand:
+        for language in Language:
+            assert (band.value, language.value) in AVAILABILITY_LINES, (band, language)

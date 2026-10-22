@@ -96,12 +96,15 @@ AVAILABILITY_LINES: dict[tuple[str, str], str] = {
     ("weekday_mornings", "es"): "Puedo hacer turnos de mañana entre semana",
     ("weekday_mornings", "pt"): "Posso fazer turnos de manhã durante a semana",
     ("weekday_mornings", "en"): "I can do weekday morning shifts",
+    ("weekday_mornings", "mixed"): "Puedo hacer turnos de mañana entre semana",
     ("evenings_weekends", "es"): "Puedo hacer tardes, noches y fines de semana",
     ("evenings_weekends", "pt"): "Posso fazer tardes, noites e fins de semana",
     ("evenings_weekends", "en"): "I can do evenings, nights and weekends",
+    ("evenings_weekends", "mixed"): "Puedo hacer tardes, noches y fines de semana",
     ("flexible", "es"): "Tengo disponibilidad completa",
     ("flexible", "pt"): "Tenho disponibilidade total",
     ("flexible", "en"): "I have full availability",
+    ("flexible", "mixed"): "Tengo disponibilidad completa",
     ("changes_mind", "es"): "Tengo disponibilidad completa",
     ("changes_mind", "pt"): "Tenho disponibilidade total",
     ("changes_mind", "en"): "I have full availability",
@@ -130,6 +133,7 @@ RUDE_PREFIXES: dict[str, str] = {
     "es": "Ya tardaron en contestar.",
     "pt": "Demoraram para responder.",
     "en": "You took ages to reply.",
+    "mixed": "Ya tardaron en contestar.",
 }
 
 MANY_QUESTIONS: dict[str, str] = {
