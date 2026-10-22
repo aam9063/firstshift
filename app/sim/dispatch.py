@@ -22,6 +22,7 @@ attempt observable by recording the message.in standalone.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -44,7 +45,11 @@ from app.db.models import Application, AuditEvent, Candidate, OutboxMessage, Res
 from app.ports.hiredesk import StageUpdate
 from app.ports.messaging import OutboundMessage
 from app.services.scripted import _SCRIPTED_BODIES as SCRIPTED_BODIES
-from app.services.scripted import _event_type_or_none
+from app.services.scripted import (
+    INTERNAL_FALLBACK_BODY,
+    _event_type_or_none,
+    is_internal_recipient,
+)
 from app.sim.store import RunRef, SimRun, snapshot_from_json, snapshot_to_json
 
 NOTICE_VERSION = "v1"
@@ -73,6 +78,8 @@ SIM_BODIES = {
 }
 
 BUTTON_LABELS = {"approve": "Aprobar", "decline": "No seguir"}
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SimDispatchRejected(RuntimeError):
@@ -247,6 +254,11 @@ def _persist_outbox_and_events(
         row_id = uuid4()
         if kind in CHANNEL_KINDS:
             outbound = _channel_message(kind, core_message.payload, candidate, run)
+            if outbound is None:
+                # The body guard suppressed a candidate-facing send without
+                # configured copy; the warning log keeps the suppression
+                # observable (rule 7).
+                continue
             outbounds.setdefault(outbound.template, outbound)
             simulator_channel.send_message(outbound.message)
             session.add(
@@ -381,7 +393,7 @@ class _PendingOutbound:
 
 def _channel_message(
     kind: str, core_payload: dict[str, Any], candidate: Candidate, run: RunRef
-) -> _PendingOutbound:
+) -> _PendingOutbound | None:
     template = str(core_payload.get("template") or kind)
     to = core_payload.get("to")
     if kind == "trainer.notify":
@@ -405,7 +417,22 @@ def _channel_message(
         or SCRIPTED_BODIES.get(template)
     )
     if body is None:
-        body = f"Lumbre Burger: {template.replace('_', ' ')}"
+        if is_internal_recipient(kind, recipient_ref):
+            # Internal recipients keep receiving a message, but with the
+            # safe internal body, never the raw outbox kind (F09 T2).
+            body = INTERNAL_FALLBACK_BODY
+        else:
+            # Never a candidate-facing fallback identifier: the kind stays
+            # observable through the warning log only (rule 7).
+            LOGGER.warning(
+                "suppressed candidate-facing outbound without configured copy: "
+                "kind=%s template=%s candidate=%s trace=%s",
+                kind,
+                template,
+                candidate.id,
+                run.trace_id,
+            )
+            return None
     buttons = core_payload.get("buttons")
     if isinstance(buttons, list) and buttons:
         quick_replies = [BUTTON_LABELS.get(str(b), str(b)) for b in buttons]

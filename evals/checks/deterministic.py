@@ -402,6 +402,77 @@ def check_outbound_language_matches(record: ConversationAudit) -> CheckResult:
     )
 
 
+# ------------------------------- 7. no internal identifiers in candidate messages (F09)
+
+# Internal outbox identifiers, in their dotted, snake_case and space-collapsed
+# spellings (the observed leak rendered bench.reserve_backup as
+# "bench.reserve backup"), plus generic snake_case and dotted-lowercase
+# identifier shapes. Applied to message.out bodies only: the transcript of the
+# candidate's conversation (evals.run._transcript renders every message.out as
+# an agent turn), which is what calibration-v1 saw reach the candidate.
+_INTERNAL_IDENTIFIER_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"\bbench[ ._-]reserve[ ._-]backup\b",
+        r"\btrainer[ ._-]notify\b",
+        r"\bbackup[ ._-]activate\b",
+        r"\bwhatsapp[ ._-]out\b",
+        r"\bhiredesk[ ._-]stage[ ._-]update\b",
+        r"\bshiftgrid[ ._-]write\b",
+        r"\b[a-z]+(?:_[a-z]+)+\b",
+        r"\b[a-z]+\.[a-z]+\b",
+    )
+)
+
+
+def check_no_internal_identifiers_in_candidate_messages(
+    record: ConversationAudit,
+) -> CheckResult:
+    """No message.out body of the conversation contains an internal outbox
+    identifier (F09 iteration-1 guardrail).
+
+    Spec source: odd/tasks/iteration-1.md T3. The calibration report
+    (evals/reports/calibration-v1-report.md) recorded the raw token
+    ``bench.reserve backup`` delivered to the candidate in eval-p002: every
+    message.out event of a conversation is rendered as an agent turn in the
+    candidate's transcript, so every body must be free of internal
+    identifier patterns. This is a guardrail: a violation fails the suite.
+    """
+    violations: list[str] = []
+    scanned = 0
+    for event in record.events:
+        if event.type != "message.out":
+            continue
+        body = event.payload.get("body")
+        if not body:
+            continue
+        scanned += 1
+        hits = []
+        for pattern in _INTERNAL_IDENTIFIER_PATTERNS:
+            match = pattern.search(str(body))
+            if match is not None:
+                hits.append(match.group(0))
+        if hits:
+            violations.append(
+                f"message.out at {event.occurred_at} carries internal identifier(s) "
+                f"{hits} in its body"
+            )
+    if violations:
+        return CheckResult(
+            name="no_internal_identifiers_in_candidate_messages",
+            passed=False,
+            evidence=f"{len(violations)} leaked identifier(s): " + "; ".join(violations),
+        )
+    return CheckResult(
+        name="no_internal_identifiers_in_candidate_messages",
+        passed=True,
+        evidence=(
+            f"{scanned} message.out body(ies) scanned, none contains an internal "
+            "outbox identifier"
+        ),
+    )
+
+
 # ------------------------------------------------------------------- registry
 
 CHECK_NAMES: tuple[str, ...] = (
@@ -411,6 +482,7 @@ CHECK_NAMES: tuple[str, ...] = (
     "no_protected_data_stored",
     "ai_disclosure_first_message",
     "outbound_language_matches",
+    "no_internal_identifiers_in_candidate_messages",
 )
 
 CHECKS: tuple[Callable[[ConversationAudit], CheckResult], ...] = (
@@ -420,10 +492,11 @@ CHECKS: tuple[Callable[[ConversationAudit], CheckResult], ...] = (
     check_no_protected_data_stored,
     check_ai_disclosure_first_message,
     check_outbound_language_matches,
+    check_no_internal_identifiers_in_candidate_messages,
 )
 
 
 def run_deterministic_checks(record: ConversationAudit) -> list[CheckResult]:
-    """Run all six S2 checks in registry order. The eval suite is 100% only
-    when every returned CheckResult has passed=True."""
+    """Run all seven registered checks in registry order. The eval suite is
+    100% only when every returned CheckResult has passed=True."""
     return [check(record) for check in CHECKS]

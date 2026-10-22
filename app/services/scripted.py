@@ -27,6 +27,7 @@ this file only persists what dispatch returns and raises on any rejection so
 a scripted flow fails loudly instead of silently stalling.
 """
 
+import logging
 from dataclasses import dataclass, fields, replace
 from datetime import UTC, datetime
 from typing import Any
@@ -82,6 +83,52 @@ _SCRIPTED_BODIES = {
     "bench_offer": "¿Quieres quedar en nuestra bolsa de empleo?",
     "rejection": "Gracias por tu interes: en esta ocasion no seguimos.",
 }
+
+
+# F09 iteration-1 channel-body guard (specs/05 section 4, one measured change).
+#
+# CANDIDATE_FACING_TEMPLATES is the explicit whitelist of outbox templates that
+# have real candidate-facing human copy. INTERNAL_RECIPIENT_KINDS are the
+# outbox kinds whose recipients are internal roles, never the candidate, and
+# INTERNAL_RECIPIENT_REFS are the simulated internal recipient refs the two
+# dispatch paths route them to. Body resolution order:
+#   1. configured template copy,
+#   2. internal-recipient safe body (internal recipients only),
+#   3. never a candidate-facing fallback identifier: an unknown kind addressed
+#      to a candidate is not delivered as a message; it is recorded (warning
+#      log, rule 7) and no pending outbound is returned.
+CANDIDATE_FACING_TEMPLATES = frozenset(
+    {
+        "offer",
+        "rejection",
+        "nudge_1",
+        "nudge_2",
+        "interview_reminder",
+        "bench_offer",
+        "bench_reengagement",
+    }
+)
+
+INTERNAL_RECIPIENT_KINDS = frozenset(
+    {"trainer.notify", "bench.reserve_backup", "backup.activate"}
+)
+
+INTERNAL_RECIPIENT_REFS = frozenset(
+    {"manager-sim", "hrbp-sim", "trainer-sim", "bench-backup-sim"}
+)
+
+# Safe body for an internal recipient when no configured copy exists: a
+# human-readable notice, never the raw outbox kind.
+INTERNAL_FALLBACK_BODY = (
+    "Aviso interno del sistema de contratacion: revisa el panel de operaciones."
+)
+
+LOGGER = logging.getLogger(__name__)
+
+
+def is_internal_recipient(kind: str, recipient_ref: str) -> bool:
+    """True when the message goes to an internal role, never to a candidate."""
+    return kind in INTERNAL_RECIPIENT_KINDS or recipient_ref in INTERNAL_RECIPIENT_REFS
 
 
 class ScriptedDispatchError(RuntimeError):
@@ -242,6 +289,11 @@ class ScriptedJourney:
                 outbound = self._whatsapp_outbound(
                     kind, core_message.payload, candidate
                 )
+                if outbound is None:
+                    # The body guard suppressed a candidate-facing send
+                    # without configured copy; the warning log keeps the
+                    # suppression observable (rule 7).
+                    continue
                 outbounds.setdefault(outbound.template, outbound)
                 simulator_channel.send_message(outbound.message)
                 session.add(
@@ -333,16 +385,29 @@ class ScriptedJourney:
 
     def _whatsapp_outbound(
         self, kind: str, core_payload: dict[str, object], candidate: Candidate
-    ) -> _PendingOutbound:
+    ) -> _PendingOutbound | None:
         template = str(core_payload.get("template") or kind)
         recipient_ref = _RECIPIENT_BY_KIND.get(kind)
         if recipient_ref is None:
             recipient_ref = (
                 "manager-sim" if core_payload.get("to") == "manager" else candidate.phone
             )
-        body = _SCRIPTED_BODIES.get(
-            template, f"Lumbre Burger: {template.replace('_', ' ')}"
-        )
+        body = _SCRIPTED_BODIES.get(template)
+        if body is None:
+            if is_internal_recipient(kind, recipient_ref):
+                body = INTERNAL_FALLBACK_BODY
+            else:
+                # Never a candidate-facing fallback identifier (F09 T2): the
+                # kind stays observable through the warning log only.
+                LOGGER.warning(
+                    "suppressed candidate-facing outbound without configured copy: "
+                    "kind=%s template=%s candidate=%s trace=%s",
+                    kind,
+                    template,
+                    candidate.id,
+                    self._trace_id,
+                )
+                return None
         return _PendingOutbound(
             message=OutboundMessage(
                 recipient_ref=recipient_ref,
