@@ -124,7 +124,15 @@ def test_seed_restaurants_is_idempotent(seeded_engine: Engine) -> None:
 def test_seed_open_shifts_next_three_weeks(seeded_engine: Engine) -> None:
     from app.db.models import OpenShift, Restaurant
 
-    now = datetime.now(UTC)
+    # The seed anchors its window to the business timezone (Europe/Madrid):
+    # first_day is the Madrid day after seeding, covering SEED_DAYS days. The
+    # test must use the same anchor, or it flakes after 22:00 UTC in summer,
+    # when Madrid is already on the next calendar day.
+    from app.db.seed import MADRID, SEED_DAYS
+
+    madrid_today = datetime.now(MADRID).date()
+    first_day = madrid_today + timedelta(days=1)
+    last_day = first_day + timedelta(days=SEED_DAYS - 1)
     with Session(seeded_engine) as session:
         shifts = session.scalars(select(OpenShift).order_by(OpenShift.starts_at)).all()
         restaurant_ids = set(session.scalars(select(Restaurant.id)).all())
@@ -135,9 +143,8 @@ def test_seed_open_shifts_next_three_weeks(seeded_engine: Engine) -> None:
     assert all(s.role in {"kitchen", "till", "foh", "drive_thru"} for s in shifts)
     assert all(s.status == "open" for s in shifts)
     assert all(s.ends_at > s.starts_at for s in shifts)
-    # Window: seeded shifts start within the next 3 weeks and cover it.
-    horizon = (now + timedelta(days=21)).date()
-    assert all(now.date() <= s.starts_at.date() <= horizon for s in shifts)
+    # Window: seeded shifts start on the seed's first day and cover SEED_DAYS.
+    assert all(first_day <= s.starts_at.date() <= last_day for s in shifts)
     span_days = {s.starts_at.date() for s in shifts}
     assert max(span_days) - min(span_days) >= timedelta(days=13)
     # Every restaurant got shifts (scope column populated).
