@@ -84,5 +84,5 @@ def test_calibration_and_checks_define_their_public_surface() -> None:
     assert callable(load_worksheet)
     assert callable(agreement)
     assert callable(ScriptedJudge().judge)
-    assert len(CHECK_NAMES) == 6
+    assert len(CHECK_NAMES) == 7
     assert Judgement is not None and JudgePort is not None and CalibrationRow is not None
