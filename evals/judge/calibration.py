@@ -20,9 +20,16 @@ import re
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from evals.judge.live import build_judge
 from evals.judge.port import ConversationTranscript, ConversationTurn, JudgePort, ScriptedJudge
 from evals.judge.rubrics import Rubric, load_all_rubrics
+
+
+def build_judge(mode: str = "scripted", **kwargs: object) -> JudgePort:
+    """Lazy shim over evals.judge.live.build_judge (keeps the CI import path
+    offline) and the seam tests patch to avoid any model client."""
+    from evals.judge.live import build_judge as _build_judge
+
+    return _build_judge(mode, **kwargs)  # type: ignore[arg-type]
 
 CALIBRATION_CONVERSATIONS = 15
 DEFAULT_REPORTS_DIR = Path("evals/reports")
