@@ -20,6 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from app.agents.tools import ToolDispatcher
+from app.core.inbound import PROTECTED_PATTERNS as _PROTECTED_PATTERNS
 from app.core.state_machine import TRANSITIONS
 from app.db.events import Event
 from app.db.models import Application, AuditEvent, Candidate, Consent, Decision
@@ -57,22 +58,10 @@ _TRANSITION_KEYS: dict[tuple[str, str, str], object] = {
 _TRANSITION_EVENTS: frozenset[str] = frozenset(t.event for t in TRANSITIONS)
 _DISPATCHER = ToolDispatcher()
 
-# G3 terms: protected characteristics are never asked, never recorded. Short
-# or ambiguous words are matched with word boundaries to avoid false hits.
-_PROTECTED_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    re.compile(pattern, re.IGNORECASE)
-    for pattern in (
-        r"pregnan", r"embaraz", r"gestaci", r"gestacio",
-        r"religi", r"iglesia", r"muslim", r"catoli", r"evangelic", r"jehova",
-        r"enfermedad", r"discapacidad", r"health condition", r"condici[oó]n de salud",
-        r"family status", r"situaci[oó]n familiar", r"estado civil", r"marital status",
-        r"\bhij[oa]s?\b", r"\bchildren\b", r"\bkids\b",
-        r"nacionalidad", r"nationality",
-        r"\bedad\b", r"\bage\b",
-        r"orientaci[oó]n sexual", r"sexual orientation",
-        r"\bsalud mental\b", r"mental health",
-    )
-)
+# G3 terms live in the product (app/core/inbound.py::PROTECTED_PATTERNS) so
+# the detector and the persisted refusal path can never drift apart: the F11
+# pilot found this check passing vacuously because the local list missed the
+# medical wording candidates actually volunteer.
 
 _REFUSAL_EVENT = "protected_data_refused"
 

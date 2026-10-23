@@ -175,6 +175,14 @@ class Application(Base):
     state: Mapped[str] = mapped_column(STATE_ENUM, default="new")
     entered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     state_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Third-party document hold (F11 T4/S4): set by the inbound classification
+    # when a submission claims another person's documents. The row-21 guard
+    # blocks tracker_completed until People Ops records an explicit clearance
+    # (who and when), so third-party documents can never be silently accepted.
+    document_review_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    document_review_cleared_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class Consent(Base):

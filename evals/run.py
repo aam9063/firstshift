@@ -331,6 +331,11 @@ def _start_run(engine: Engine, persona: Persona) -> RunRef:
             first_name=persona.first_name,
             phone=persona.phone,
             source="qr",
+            # The persona's language is the intake's stated language: the
+            # candidate record carries it from creation, so timer nudges and
+            # canned guard replies composed before the first agent turn
+            # (save_language_tag) already follow the stated preference (C-O4).
+            language=LANGUAGE_TAGS[persona.language.value],
         )
         created = hiredesk_webhook(payload=payload, session=session)
         assert isinstance(created, dict), "a fresh eval application cannot be a replay"
