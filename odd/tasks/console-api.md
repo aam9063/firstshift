@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** implement the console-facing API from `specs/04b-console.md` section 2 so the FirstShift Console can stop using MSW mocks and read real data from the backend by pointing `VITE_API_URL` at it.
-- **Status:** in progress
+- **Status:** closed, awaiting review (PR open)
 - **Branch:** feature/console-api, in its own Orca worktree (never touches the backend-infra worktree or the console session's tree).
 
 ## Specs
@@ -78,13 +78,13 @@ The list endpoint shape is defined by the console's table columns (`web/src/feat
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S1 | Contract tests pinning every response shape against the TypeScript contract (keys and kinds), RED first | pending |
-| T2 | S1 | Candidates list and detail endpoints | pending |
-| T3 | S1 | Restaurants, shifts, coverage and manager SLA | pending |
-| T4 | S1 | Metrics funnel and KPIs | pending |
-| T5 | S1 | Escalations, audit, evals | pending |
-| T6 | S1 | Takeover, release, human messages, restaurant pause, outbox replay path, erasure requests | pending |
-| T7 | - | Verify, close, PR | pending |
+| T1 | S1 | Contract tests pinning every response shape against the TypeScript contract (keys and kinds), RED first | done (46 tests) |
+| T2 | S1 | Candidates list and detail endpoints | done |
+| T3 | S1 | Restaurants, shifts, coverage and manager SLA | done |
+| T4 | S1 | Metrics funnel and KPIs, plus the /api/overview and /api/live composites | done |
+| T5 | S1 | Escalations, audit, evals | done |
+| T6 | S1 | Takeover, release, human messages, restaurant pause, outbox replay path, erasure requests | done |
+| T7 | - | Verify, close, PR | done |
 
 ## Open questions
 
@@ -94,3 +94,9 @@ The list endpoint shape is defined by the console's table columns (`web/src/feat
 
 - L1 (user, verbatim): "ok lanzalo en paralelo cuando acabe. El mock o sea el diseño ha de respetarse, que el trabajo no se pise con este worktree"
 - L2: Console session owns `web/`; this branch only adds backend endpoints under `app/api/console/` and tests.
+
+- L3: Evidence (b4e10bd): read endpoints (candidates with pagination and six filters, full detail with journey/threads/writes/consent/pre-boarding, restaurants and shifts, metrics funnel and six KPI cards over the metric-tree formulas, escalations, audit search, evals) and action endpoints (takeover/release with agentInControl derived from the append-only audit, human messages as message.out sender human with a 409 outside takeover, restaurant pause/resume, erasure requests), all role-audited via X-Actor-Role. 46 tests written RED first.
+- L4: Single owner for POST /api/outbox/{id}/replay: app/api/outbox.py (F12) owns the path; the console handler was removed and its tests were rewritten to the shared pending/attempts-0 semantics (9bf1b9c). Full suite 533 at that point.
+- L5: Evidence (ce81f5b): /api/overview and /api/live match OverviewResponse and LiveFeedResponse exactly, with honest empty states (no sim run, no turns, no DLQ) and real rows for activity/attention/coverage; 11 shape/behaviour tests RED first; full suite 544 passed, ruff and mypy clean.
+- L6: Known, documented limits: agentVersion is empty (scripted backend), lastName empty (not stored), matchedShift empty unless shift rows carry the link, statusCode 0 for unconfirmed writes, manager_minutes_per_hire empty (not collected), trends empty under two days of history, consentRow may say none recorded in the sim path. The guardrail computation is reimplemented in the console module because evals/checks is not mypy-strict clean; that duplication is documented.
+- L7: How the console switches: set VITE_API_URL to the backend, disable the MSW worker (the console session owns that switch), and regenerate types with pnpm gen:api once the backend runs. No component change is required by this feature.
