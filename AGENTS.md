@@ -100,6 +100,7 @@ odd/tasks/       # ODD feature documents
 - `dev` is the integration branch. Every `feature/...` or `fix/...` branch is created from `dev` and merged back into `dev` through a pull request.
 - `main` only receives merges from `dev` when the state is demo-ready. Direct pushes to `main` or `dev` are not part of the workflow.
 - CI (`.github/workflows/ci.yml`) must be green before merging: backend pytest/ruff/mypy, console vitest/eslint/tsc/build, compose config validation.
+- After every `dev` -> `main` merge, main is synced back into `dev` automatically by `.github/workflows/sync-dev.yml`. `main` only ever receives merges from `dev` (it is a subset of `dev`), which is what makes the automated `-X ours` reconciliation safe. Never let `main` and `dev` diverge, and never push a feature branch straight to `main`.
 - Secret scanning is owned by GitGuardian (GitHub App). No passwords, API keys or tokens ever live in the repository: configuration arrives through environment variables (`env.example` documents the shape, `.env` is gitignored).
 
 ## 9. Definition of done for any feature
