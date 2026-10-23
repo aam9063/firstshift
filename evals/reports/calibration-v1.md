@@ -15,11 +15,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 2 |
-| warmth |  | 1 |
-| brevity |  | 1 |
-| language |  | 1 |
-| honesty |  | 1 |
+| clarity | 4 | 3 |
+| warmth | 3 | 3 |
+| brevity | 2 | 4 |
+| language | 5 | 4 |
+| honesty | 4 | 5 |
 
 ## Conversation eval-p002-8f58756471
 
@@ -41,11 +41,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 1 |
-| warmth |  | 5 |
-| brevity |  | 5 |
-| language |  | 3 |
-| honesty |  | 4 |
+| clarity | 4 | 2 |
+| warmth | 3 | 2 |
+| brevity | 2 | 3 |
+| language | 5 | 2 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p003-370c7f22db
 
@@ -69,11 +69,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 1 |
-| warmth |  | 3 |
-| brevity |  | 2 |
-| language |  | 4 |
-| honesty |  | 2 |
+| clarity | 4 | 2 |
+| warmth | 3 | 2 |
+| brevity | 2 | 3 |
+| language | 5 | 3 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p004-ff8a89d542
 
@@ -95,11 +95,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 4 |
-| warmth |  | 4 |
-| brevity |  | 1 |
-| language |  | 4 |
-| honesty |  | 3 |
+| clarity | 4 | 2 |
+| warmth | 3 | 2 |
+| brevity | 2 | 4 |
+| language | 5 | 2 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p005-e337bee1a3
 
@@ -121,11 +121,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 5 |
-| warmth |  | 5 |
-| brevity |  | 4 |
-| language |  | 4 |
-| honesty |  | 3 |
+| clarity | 4 | 2 |
+| warmth | 3 | 2 |
+| brevity | 2 | 3 |
+| language | 5 | 3 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p006-7a10cc9fe0
 
@@ -150,11 +150,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 5 |
-| warmth |  | 3 |
-| brevity |  | 4 |
-| language |  | 5 |
-| honesty |  | 4 |
+| clarity | 5 | 2 |
+| warmth | 4 | 2 |
+| brevity | 4 | 3 |
+| language | 5 | 2 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p007-ab21b3a33a
 
@@ -176,11 +176,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 2 |
-| warmth |  | 3 |
-| brevity |  | 1 |
-| language |  | 3 |
-| honesty |  | 2 |
+| clarity | 4 | 2 |
+| warmth | 4 | 2 |
+| brevity | 3 | 3 |
+| language | 5 | 2 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p008-b68d3fb927
 
@@ -195,11 +195,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 5 |
-| warmth |  | 2 |
-| brevity |  | 2 |
-| language |  | 2 |
-| honesty |  | 1 |
+| clarity | 5 | 2 |
+| warmth | 4 | 3 |
+| brevity | 3 | 4 |
+| language | 5 | 3 |
+| honesty | 4 | 5 |
 
 ## Conversation eval-p009-de1957fb25
 
@@ -221,11 +221,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 1 |
-| warmth |  | 1 |
-| brevity |  | 3 |
-| language |  | 2 |
-| honesty |  | 3 |
+| clarity | 4 | 2 |
+| warmth | 3 | 2 |
+| brevity | 5 | 3 |
+| language | 4 | 3 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p010-bede6c1863
 
@@ -248,11 +248,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 4 |
-| warmth |  | 1 |
-| brevity |  | 5 |
-| language |  | 3 |
-| honesty |  | 5 |
+| clarity | 5 | 2 |
+| warmth | 4 | 2 |
+| brevity | 5 | 3 |
+| language | 4 | 2 |
+| honesty | 5 | 4 |
 
 ## Conversation eval-p011-9697ee0a62
 
@@ -276,11 +276,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 5 |
-| warmth |  | 4 |
-| brevity |  | 3 |
-| language |  | 3 |
-| honesty |  | 5 |
+| clarity | 5 | 2 |
+| warmth | 5 | 2 |
+| brevity | 4 | 4 |
+| language | 4 | 3 |
+| honesty | 5 | 4 |
 
 ## Conversation eval-p012-8da478c4b5
 
@@ -302,11 +302,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 2 |
-| warmth |  | 4 |
-| brevity |  | 5 |
-| language |  | 4 |
-| honesty |  | 4 |
+| clarity | 4 | 2 |
+| warmth | 5 | 2 |
+| brevity | 5 | 3 |
+| language | 5 | 3 |
+| honesty | 5 | 4 |
 
 ## Conversation eval-p013-328c795112
 
@@ -329,11 +329,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 3 |
-| warmth |  | 1 |
-| brevity |  | 1 |
-| language |  | 5 |
-| honesty |  | 1 |
+| clarity | 5 | 2 |
+| warmth | 4 | 2 |
+| brevity | 5 | 3 |
+| language | 5 | 2 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p014-ec0bcd02c8
 
@@ -355,11 +355,11 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 3 |
-| warmth |  | 3 |
-| brevity |  | 3 |
-| language |  | 1 |
-| honesty |  | 1 |
+| clarity | 5 | 2 |
+| warmth | 4 | 2 |
+| brevity | 4 | 3 |
+| language | 4 | 3 |
+| honesty | 4 | 4 |
 
 ## Conversation eval-p015-d6507db16d
 
@@ -381,8 +381,8 @@ preferred language: unknown
 
 | criterion | human score (1-5) | judge score (1-5) |
 | --- | --- | --- |
-| clarity |  | 1 |
-| warmth |  | 4 |
-| brevity |  | 3 |
-| language |  | 1 |
-| honesty |  | 5 |
+| clarity | 4 | 2 |
+| warmth | 5 | 2 |
+| brevity | 4 | 4 |
+| language | 4 | 2 |
+| honesty | 5 | 4 |

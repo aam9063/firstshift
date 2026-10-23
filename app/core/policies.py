@@ -108,7 +108,14 @@ def offer_within_window(
 def documents_and_csv_confirmed(
     app: Application, actor: Actor, payload: Mapping[str, Any], now: datetime | None
 ) -> bool:
-    # Row 21: documents complete in Nominia360 and creation confirmed by the CSV.
+    # Row 21: documents complete in Nominia360 and creation confirmed by the
+    # CSV, and no third-party document review outstanding without an explicit
+    # People Ops clearance (F11 T4/S4): the dispatch path injects these flags
+    # from the application row when a review is required.
+    if payload.get("document_review_required") and not payload.get(
+        "document_review_cleared"
+    ):
+        return False
     return app.documents_complete and app.csv_confirmed
 
 

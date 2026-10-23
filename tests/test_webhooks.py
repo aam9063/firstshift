@@ -233,3 +233,52 @@ def test_unknown_restaurant_is_rejected(client: TestClient, migrated_engine: Eng
     assert response.status_code == 404
     assert store_counts(migrated_engine)["candidates"] == 0
     assert simulator_messages(client) == []
+
+
+def test_degraded_channel_pauses_first_contact(
+    client: TestClient, migrated_engine: Engine
+) -> None:
+    """F12 S4: when the channel is degraded the candidate is created, the
+    state does not advance, and the candidate gets the holding message from
+    the catalog instead of silence."""
+    from uuid import UUID
+
+    from app.core.degraded import set_known_statuses
+    from app.db.models import Application, AuditEvent, OutboxMessage
+
+    set_known_statuses({"whatsapp": "degraded"})
+    try:
+        response = client.post(
+            "/webhooks/hiredesk",
+            json=webhook_payload(
+                event_id="hd-evt-degraded-0001",
+                application_id="hd-app-degraded-0001",
+                candidate_id="hdc-degraded-0001",
+            ),
+        )
+    finally:
+        set_known_statuses(None)
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "paused"
+    assert body["paused_by"] == "whatsapp"
+
+    with Session(migrated_engine) as session:
+        application = session.get(Application, UUID(body["application_id"]))
+        assert application is not None
+        assert application.state == "new", "a paused first contact must not advance the state"
+        holding = [
+            row
+            for row in session.scalars(select(OutboxMessage)).all()
+            if row.payload.get("template") == "holding"
+        ]
+        assert holding, "no holding message was queued"
+        assert holding[0].status == "api_confirmed"
+        pauses = [
+            row
+            for row in session.scalars(select(AuditEvent)).all()
+            if row.event_type == "flow.paused"
+        ]
+        assert pauses, "the pause was not audited"
+        assert pauses[0].payload["required_system"] == "whatsapp"

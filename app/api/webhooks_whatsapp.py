@@ -27,6 +27,7 @@ mirrors the HireDesk webhook (app/api/webhooks.py) semantics:
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import uuid4
@@ -67,6 +68,8 @@ from app.settings import settings
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+LOGGER = logging.getLogger(__name__)
 
 NOTICE_VERSION = "v1"
 
@@ -219,6 +222,17 @@ async def whatsapp_webhook(
         validator = RequestValidator(token)
         signature = request.headers.get("x-twilio-signature", "")
         if not validator.validate(_canonical_url(request), params, signature):
+            # Operational detail without secrets: which URL we validated
+            # against and which proxy headers arrived (the usual cause of a
+            # mismatch is the configured public URL differing from this one).
+            LOGGER.warning(
+                "twilio signature mismatch url=%s host=%s xfh=%s xfp=%s params=%s",
+                _canonical_url(request),
+                request.headers.get("host"),
+                request.headers.get("x-forwarded-host"),
+                request.headers.get("x-forwarded-proto"),
+                sorted(params),
+            )
             raise HTTPException(status_code=403, detail="invalid twilio signature")
 
     message_sid = params.get("MessageSid", "")

@@ -1,8 +1,10 @@
 """The mock client systems as one FastAPI app (specs/04 section 1.2).
 
 Run with: python -m mocks.services (uvicorn). One router per client system:
-HireDesk, Nómina360, ShiftGrid, TillCloud, LearnBite. In-memory module-level
-stores, seeded at startup and re-seeded by each router's /reset endpoint.
+HireDesk, Nómina360, ShiftGrid, TillCloud, LearnBite and M365, plus the
+/__faults admin endpoints (mocks/faults.py) to toggle fault injection on a
+live mock server. In-memory module-level stores, seeded at startup and
+re-seeded by each router's /reset endpoint.
 """
 
 from __future__ import annotations
@@ -12,7 +14,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from mocks.services.routers import hiredesk, learnbite, nomina360, shiftgrid, tillcloud
+from mocks.faults import faults
+from mocks.faults import router as faults_router
+from mocks.services.routers import (
+    hiredesk,
+    learnbite,
+    m365,
+    nomina360,
+    shiftgrid,
+    tillcloud,
+)
 from mocks.services.seed import build_seed
 
 
@@ -24,12 +35,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     shiftgrid.store.reset(seed)
     tillcloud.store.reset(seed)
     learnbite.store.reset(seed)
+    m365.store.reset(seed)
+    faults.clear()  # no ambient state: a fresh server starts fault-free
     yield
 
 
 app = FastAPI(
     title="Lumbre Burger mock client systems",
-    description="Mock ATS, HRIS, WFM, POS and LMS for the FirstShift prototype.",
+    description="Mock ATS, HRIS, WFM, POS, LMS and M365 for the FirstShift prototype.",
     lifespan=lifespan,
 )
 
@@ -39,8 +52,11 @@ for system_router in (
     shiftgrid.router,
     tillcloud.router,
     learnbite.router,
+    m365.router,
 ):
     app.include_router(system_router)
+
+app.include_router(faults_router)
 
 
 @app.get("/health")

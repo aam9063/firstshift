@@ -17,15 +17,46 @@ import evals.judge.rubrics  # noqa: F401
 JUDGE_DIR = Path(evals.judge.port.__file__).parent
 
 
-def test_judge_modules_never_import_a_model_client() -> None:
+OFFLINE_JUDGE_MODULES = {"port.py", "rubrics.py", "calibration.py", "__init__.py"}
+LIVE_JUDGE_MODULE = "live.py"
+
+
+def test_offline_judge_modules_never_import_a_model_client() -> None:
+    """The CI path stays offline: only the explicit live module may import a
+    model client, and the offline modules must not reach it transitively."""
     forbidden = {"openai", "strands", "strands_agents", "httpx", "requests"}
     for module_file in JUDGE_DIR.glob("*.py"):
+        if module_file.name not in OFFLINE_JUDGE_MODULES:
+            assert module_file.name == LIVE_JUDGE_MODULE, (
+                f"unexpected judge module {module_file.name}"
+            )
+            continue
         tree = ast.parse(module_file.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 assert node.names[0].name.split(".")[0] not in forbidden, module_file.name
             elif isinstance(node, ast.ImportFrom) and node.level == 0:
                 assert (node.module or "").split(".")[0] not in forbidden, module_file.name
+        if module_file.name == "calibration.py":
+            top_level = {
+                (node.module or "").split(".")[-1]
+                for node in tree.body
+                if isinstance(node, ast.ImportFrom)
+            }
+            assert "live" not in top_level, (
+                "calibration must import the live judge lazily (inside a function)"
+            )
+
+
+def test_build_judge_defaults_to_the_scripted_judge() -> None:
+    """A bare construction path never reaches the network: scripted is the
+    default, live is opt-in."""
+    import inspect
+
+    from evals.judge.live import build_judge
+
+    signature = inspect.signature(build_judge)
+    assert signature.parameters["mode"].default == "scripted"
 
 
 def test_checks_module_has_no_i_o_dependencies() -> None:
@@ -53,5 +84,5 @@ def test_calibration_and_checks_define_their_public_surface() -> None:
     assert callable(load_worksheet)
     assert callable(agreement)
     assert callable(ScriptedJudge().judge)
-    assert len(CHECK_NAMES) == 6
+    assert len(CHECK_NAMES) == 7
     assert Judgement is not None and JudgePort is not None and CalibrationRow is not None

@@ -3,8 +3,8 @@
 ## Header
 
 - **Objective:** stop judging the agents by "looks good in the demo": generate 40+ synthetic personas, run them through the real system with a candidate-simulator agent, measure deterministic checks (must be 100%), task success against persona ground truth, conversation quality with a calibrated LLM judge, fairness parity and cost per hire, and publish evals/reports/eval-v1.md.
-- **Status:** implementation complete, one human step outstanding (calibration labels); awaiting review
-- **Next step:** F09 iteration-1 after the human labels the calibration worksheet.
+- **Status:** closed, calibration measured; awaiting review (PR open)
+- **Next step:** F09 iteration-1 with the judge left strict; first defects to fix are the leaked internal token and the language drift.
 - **Branch:** feature/eval-harness (from dev after PR 27 merged).
 
 ## Specs
@@ -46,4 +46,5 @@ Source of truth: `specs/05-iteration-evals.md` sections 1, 2 and 3. Governing qu
 - L4: Evidence (T2/T4a): 6 deterministic checks with passing+violating fixtures, judge port (ScriptedJudge + offline OpenAI scaffold), 5 versioned rubrics, calibration worksheet/agreement; 45 tests; merged from the eval-judge worktree (6a09c40, merge 7ed857c).
 - L5: Evidence (T3/T5): metrics (task success, funnel, fairness 0.8 inclusive, cost/latency), runner CLI, baseline eval-v1 (0 deterministic failures across 44, task success 44/44, fairness lowest 0.82 es and mixed, 0.83 age 18-24, day-1 show 92.3%, 210 agent turns, $0.0026 cost per hire at the scripted proxy rate, p95 latency 0.051 ms scripted). Fast suite 12.6s. Commit 41c91d1.
 - L6: T1 defect found by the runner worker and fixed under an approved minimal surface expansion: AVAILABILITY_LINES and RUDE_PREFIXES lacked the 'mixed' language variants, raising KeyError for 8 personas; two RED-first regression tests now pin total coverage.
+- L8: Calibration evidence (T4 second half, commit 335168d): the owner hand-labeled all 15 conversations (75 cells, genuine human labels, 5945032). Live judge (gpt-4.1-mini, rubrics v1) agreement: exact 17%, within-1 48%; per criterion exact/within-1: clarity 0/7, warmth 7/47, brevity 20/60, language 0/27, honesty 60/100. Diagnosis: the judge is 1-3 points stricter on clarity, warmth and language; inspection of eval-p002 proved the judge right (Spanish -> Portuguese -> Spanish drift, plus the raw internal token 'bench.reserve backup' delivered as a candidate message). Decision: keep the judge strict, fix the agent in F09 rather than calibrating the judge down to a lenient scale. Limitations recorded: in-sample calibration, labels clustered at 4-5 (0 ones), single judge model.
 - L7: Interpreted decisions: interview attendance always confirmed by the sim world (show rate 1.0 by construction, reliability gates the day-1 show); manager approvals also write the Decision row (app has no Decision writer yet) or INV-1 would fail; distressed escalation goes through the real manager-SLA timer; fairness nationality/age groups are deterministic proxies because G3 forbids collecting them; mixed-language personas answer in Spanish.

@@ -153,20 +153,6 @@ AGENT_BODIES: dict[str, dict[str, str]] = {
             "Do you consent to continue here?"
         ),
     },
-    "screening": {
-        "es": (
-            "Gracias. Tres preguntas: ¿puedes trabajar en España? "
-            "¿Tienes 18 o más? ¿Llegas bien al local?"
-        ),
-        "pt": (
-            "Obrigado. Três perguntas: podes trabalhar em Portugal? "
-            "Tens 18 ou mais? Chegas bem ao local?"
-        ),
-        "en": (
-            "Thanks. Three questions: can you work here? Are you 18 or older? "
-            "Can you get to the site?"
-        ),
-    },
     "proposal": {
         "es": "Encajas con el turno propuesto: paga 12 euros por hora. ¿Te encaja?",
         "pt": "Encaixas no turno proposto: paga 12 euros por hora. Te interessa?",
@@ -196,6 +182,30 @@ AGENT_BODIES: dict[str, dict[str, str]] = {
             "when a shift fits you."
         ),
     },
+}
+
+# Screening asks one question per turn (iteration-4): the ordered per-language
+# question bodies. The first question keeps the three-questions framing so the
+# candidate knows why more messages are coming; each message carries exactly
+# one question (clarity-v1 anchor 2, brevity-v1 anchor 2). The consent-once
+# test's screening locator (tests/test_consent_ask_once.py) keys on the same
+# framing.
+SCREENING_QUESTIONS: dict[str, tuple[str, str, str]] = {
+    "es": (
+        "Gracias. Tres preguntas, una a una. ¿Puedes trabajar en España?",
+        "¿Tienes 18 o más?",
+        "¿Llegas bien al local?",
+    ),
+    "pt": (
+        "Obrigado. Três perguntas, uma a uma. Podes trabalhar em Portugal?",
+        "Tens 18 ou mais?",
+        "Chegas bem ao local?",
+    ),
+    "en": (
+        "Thanks. Three questions, one at a time. Can you work here?",
+        "Are you 18 or older?",
+        "Can you get to the site?",
+    ),
 }
 
 DECISION_SUMMARY = (
@@ -321,6 +331,11 @@ def _start_run(engine: Engine, persona: Persona) -> RunRef:
             first_name=persona.first_name,
             phone=persona.phone,
             source="qr",
+            # The persona's language is the intake's stated language: the
+            # candidate record carries it from creation, so timer nudges and
+            # canned guard replies composed before the first agent turn
+            # (save_language_tag) already follow the stated preference (C-O4).
+            language=LANGUAGE_TAGS[persona.language.value],
         )
         created = hiredesk_webhook(payload=payload, session=session)
         assert isinstance(created, dict), "a fresh eval application cannot be a replay"
@@ -332,7 +347,10 @@ def _start_run(engine: Engine, persona: Persona) -> RunRef:
             application_id=str(application.id),
             state=State(application.state),
             notice_version=NOTICE_VERSION,
-            language="es",
+            # The persona's language, not a literal: the core snapshot carries
+            # the candidate's language from intake on (iteration-2), so the
+            # language guardrail measures the candidate's real language.
+            language=LANGUAGE_TAGS[persona.language.value],
             contacted_at=base_at,
             # The only world fact seeded up front: the manager's open slot.
             manager_open_slots=(base_at + MANAGER_SLOT_OFFSET,),
@@ -445,6 +463,66 @@ def _body(key: str, persona: Persona) -> str:
     return AGENT_BODIES[key][tag].format(name=persona.first_name)
 
 
+def _consent_row_exists(engine: Engine, run: RunRef) -> bool:
+    """Whether a consent record is already stored for this candidate (G2):
+    the consent ask is only composed while none exists."""
+    with Session(engine) as session:
+        row = session.scalar(
+            select(Consent.id).where(Consent.candidate_id == run.candidate_id).limit(1)
+        )
+        return row is not None
+
+
+def _asked_screening_questions(engine: Engine, run: RunRef, tag: str) -> int:
+    """How many of the three screening questions this conversation already
+    asked (iteration-4). The scripted composer only ever asks the next one in
+    order, so the count is the index of the next question; the flow stays in
+    `consented` until all three are asked and answered."""
+    asked = set(SCREENING_QUESTIONS[tag])
+    with Session(engine) as session:
+        bodies = session.scalars(
+            select(Event.payload["body"]).where(
+                Event.trace_id == run.trace_id,
+                Event.type == "message.out",
+            )
+        ).all()
+    return sum(1 for body in bodies if body in asked)
+
+
+def _capture_outstanding_consent(engine: Engine, run: RunRef, persona: Persona) -> RunRef:
+    """One change (iteration-3): a candidate reply while a consent ask is
+    outstanding answers it, so consent is captured through the core before
+    the agent composes its next message. The HireDesk first contact sends the
+    consent ask without capturing consent, so without this the scripted reply
+    for ("new", "contacted") asked again before its own capture_consent tool
+    call ran: the candidate saw the same ask twice.
+
+    As before (the capture_consent tool path), the scripted eval treats the
+    candidate's first reply as the consent reply regardless of its wording,
+    and the Consent row mirrors what the tool records (channel, purpose,
+    notice version, simulated timestamp)."""
+    tag = LANGUAGE_TAGS[persona.language.value]
+    run = _dispatch(
+        engine,
+        run,
+        event="candidate_consents",
+        role=ActorKind.CANDIDATE,
+        payload={"channel": "whatsapp", "language": tag},
+    )
+    with Session(engine) as session, session.begin():
+        session.add(
+            Consent(
+                id=uuid4(),
+                candidate_id=run.candidate_id,
+                channel="whatsapp",
+                purpose="screening",
+                notice_version=NOTICE_VERSION,
+                granted_at=_sim_now(engine, run),
+            )
+        )
+    return run
+
+
 def _scripted_reply(engine: Engine, run: RunRef, persona: Persona) -> dict[str, Any]:
     """The recruit agent's scripted reply for the current state (deterministic).
 
@@ -454,7 +532,9 @@ def _scripted_reply(engine: Engine, run: RunRef, persona: Persona) -> dict[str, 
     tag = LANGUAGE_TAGS[persona.language.value]
     state = _current_state(engine, run)
 
-    if state in ("new", "contacted"):
+    # The consent ask is composed only while no consent record exists (G2):
+    # once consent is stored the conversation moves on, it never asks again.
+    if state in ("new", "contacted") and not _consent_row_exists(engine, run):
         return {
             "message": {"body": _body("consent", persona), "language": tag},
             "tool_calls": [
@@ -462,10 +542,34 @@ def _scripted_reply(engine: Engine, run: RunRef, persona: Persona) -> dict[str, 
             ],
         }
     if state == "consented":
+        # One change (iteration-4): screening asks one question per turn and
+        # the flow stays in `consented` while questions are outstanding. Each
+        # reply is answered with the next question; the answers are captured
+        # together, exactly once, after the third (save_screening_answers), so
+        # the core receives the same facts as the single three-question turn
+        # did. The tool allow-list is untouched: save_screening_answers
+        # transitions to `screening` inside this turn, so get_open_shifts and
+        # propose_shifts run within the screening allow-list exactly as they
+        # did in the old screening-state turn.
+        asked = _asked_screening_questions(engine, run, tag)
+        if asked < len(SCREENING_QUESTIONS[tag]):
+            return {
+                "message": {
+                    "body": SCREENING_QUESTIONS[tag][asked],
+                    "language": tag,
+                },
+                "tool_calls": (
+                    [{"name": "save_language_tag", "arguments": {"language": tag}}]
+                    if asked == 0
+                    else []
+                ),
+            }
+        # All three questions asked and answered: capture the screening facts
+        # and proceed exactly as the old screening-state turn did.
+        shift_ids = _open_shift_ids(engine, run)
         return {
-            "message": {"body": _body("screening", persona), "language": tag},
+            "message": {"body": _body("proposal", persona), "language": tag},
             "tool_calls": [
-                {"name": "save_language_tag", "arguments": {"language": tag}},
                 {
                     "name": "save_screening_answers",
                     "arguments": {
@@ -475,6 +579,8 @@ def _scripted_reply(engine: Engine, run: RunRef, persona: Persona) -> dict[str, 
                         "availability": [persona.availability.value],
                     },
                 },
+                {"name": "get_open_shifts", "arguments": {}},
+                {"name": "propose_shifts", "arguments": {"shift_ids": shift_ids}},
             ],
         }
     if state == "screening":
@@ -606,13 +712,44 @@ def _world_steps(engine: Engine, run: RunRef, persona: Persona) -> None:
 def _handle_silence(engine: Engine, run: RunRef, persona: Persona) -> None:
     """The persona went silent: the designed graceful endings apply.
 
-    Still in contact: the real 48 h bench timer path. In screening: the
-    agent's no-reply policy benches with consent (benched_with_consent).
+    Still in contact: the real 48 h bench timer path. Mid-screening (questions
+    outstanding, so the flow is in `consented`) or in screening: the agent's
+    no-reply policy benches with consent (benched_with_consent).
     """
     state = _current_state(engine, run)
     if state == "contacted":
         run = _advance_to(engine, run, _sim_now(engine, run) + timedelta(days=2))
         # nudge at 2 h, nudge at 24 h, bench at 48 h: the real timer path
+    elif state == "consented" and _asked_screening_questions(
+        engine, run, LANGUAGE_TAGS[persona.language.value]
+    ):
+        # The candidate went silent while screening questions are outstanding
+        # (the flow stays in `consented` until the third answer, iteration-4):
+        # the agent's no-reply policy still benches with consent, the same
+        # graceful ending the screening state had. Core path: two system
+        # dispatches, screening starts (the questions were asked), then the
+        # bench with consent.
+        tag = LANGUAGE_TAGS[persona.language.value]
+        result = run_agent_turn(
+            engine,
+            _refresh(engine, run),
+            agent="recruit",
+            inbound_text="(sin respuesta)",
+            reply={
+                "message": {
+                    "body": _body("bench", persona),
+                    "language": tag,
+                },
+                "tool_calls": [],
+            },
+        )
+        assert result["state"] == "consented", result
+        run = _dispatch(engine, run, event="screening_starts", role=ActorKind.SYSTEM)
+        run = _dispatch(
+            engine, run, event="benched_with_consent", role=ActorKind.SYSTEM,
+            payload={"bench_consent": True},
+        )
+        assert _current_state(engine, run) == "benched"
     elif state == "screening":
         result = run_agent_turn(
             engine,
@@ -712,6 +849,14 @@ def drive_conversation(
         last_sent = turn.sent_at
         send_person_turn(engine, run, turn)
         _record_protected_refusal(engine, run, turn.text)
+        run = _refresh(engine, run)
+        # A reply to an outstanding consent ask captures consent first, so the
+        # reply composition below never asks again (iteration-3, G2).
+        if (
+            _current_state(engine, run) == "contacted"
+            and not _consent_row_exists(engine, run)
+        ):
+            run = _capture_outstanding_consent(engine, run, persona)
         run_agent_turn(
             engine,
             _refresh(engine, run),

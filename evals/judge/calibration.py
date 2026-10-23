@@ -17,11 +17,19 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from evals.judge.port import ConversationTranscript, ConversationTurn, JudgePort, ScriptedJudge
 from evals.judge.rubrics import Rubric, load_all_rubrics
+
+
+def build_judge(mode: str = "scripted", **kwargs: object) -> JudgePort:
+    """Lazy shim over evals.judge.live.build_judge (keeps the CI import path
+    offline) and the seam tests patch to avoid any model client."""
+    from evals.judge.live import build_judge as _build_judge
+
+    return _build_judge(mode, **kwargs)  # type: ignore[arg-type]
 
 CALIBRATION_CONVERSATIONS = 15
 DEFAULT_REPORTS_DIR = Path("evals/reports")
@@ -200,6 +208,86 @@ def agreement(rows: list[CalibrationRow]) -> AgreementResult:
     )
 
 
+# ------------------------------------------------- live fill of unscored rows
+
+
+def _fill_unscored_rows(
+    rows: list[CalibrationRow], *, worksheet_path: Path, report_path: Path | None
+) -> list[CalibrationRow]:
+    """Fill the judge column of unscored rows with the live judge (S4).
+
+    Rows already carrying a judge score keep it (the scripted pre-fill stays
+    intact). Rows whose conversation is missing from the report are left
+    unscored with a note. The worksheet is rewritten in place when anything
+    was filled, so reruns do not repay live calls for already-filled rows.
+    """
+    pending: dict[str, list[int]] = {}
+    for i, row in enumerate(rows):
+        if row.judge_score is None:
+            pending.setdefault(row.conversation_id, []).append(i)
+    if not pending:
+        return rows  # nothing to do: never construct the live judge
+
+    judge = build_judge("live")
+    rubrics = list(load_all_rubrics())
+    report_path = report_path or _latest_report(DEFAULT_REPORTS_DIR)
+    transcripts = {t.conversation_id: t for t in _transcripts_from_report(report_path)}
+
+    filled = list(rows)
+    filled_count = 0
+    for conversation_id, indexes in pending.items():
+        transcript = transcripts.get(conversation_id)
+        if transcript is None:
+            print(
+                f"note: conversation {conversation_id} is not in {report_path}; "
+                "its unscored rows are left as-is"
+            )
+            continue
+        judgement = judge.judge(transcript, rubrics)
+        for i in indexes:
+            score = judgement.score_for(rows[i].criterion)
+            if score is None:
+                raise ValueError(
+                    f"live judge for {conversation_id} returned no score for "
+                    f"criterion '{rows[i].criterion}'"
+                )
+            filled[i] = replace(rows[i], judge_score=score.score)
+            filled_count += 1
+
+    if filled_count:
+        _rewrite_judge_column(worksheet_path, filled)
+        print(
+            f"filled {filled_count} unscored judge cell(s) with the live judge "
+            f"({getattr(judge, 'model', 'live-judge')}); updated {worksheet_path}"
+        )
+    return filled
+
+
+def _rewrite_judge_column(path: Path, rows: list[CalibrationRow]) -> None:
+    """Write newly filled judge scores back into the worksheet, preserving the
+    human column exactly."""
+    by_key = {(r.conversation_id, r.criterion): r.judge_score for r in rows}
+    text = path.read_text(encoding="utf-8")
+    trailing_newline = text.endswith("\n")
+    current_conversation: str | None = None
+    out: list[str] = []
+    for line in text.splitlines():
+        section = _CONVERSATION_RE.match(line)
+        if section:
+            current_conversation = section.group(1)
+            out.append(line)
+            continue
+        row = _TABLE_ROW_RE.match(line)
+        criterion = row.group(1).strip() if row else ""
+        if row and criterion in _CRITERIA_ORDER and current_conversation:
+            score = by_key.get((current_conversation, criterion))
+            if score is not None:
+                out.append(f"| {criterion} | {row.group(2).strip()} | {score} |")
+                continue
+        out.append(line)
+    path.write_text("\n".join(out) + ("\n" if trailing_newline else ""), encoding="utf-8")
+
+
 # --------------------------------------------------------------- the CLI
 
 
@@ -275,6 +363,20 @@ def main(argv: list[str] | None = None) -> int:
 
     score = subparsers.add_parser("score", help="compute human-judge agreement")
     score.add_argument("--worksheet", type=Path, required=True)
+    score.add_argument(
+        "--judge",
+        choices=("scripted", "live"),
+        default="scripted",
+        help="fill unscored judge cells with the live model judge before "
+        "computing agreement (default: scripted pre-fill stays as-is)",
+    )
+    score.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="eval report JSON holding the transcripts (default: newest in "
+        "evals/reports; only used when --judge live)",
+    )
     score.add_argument("--out", type=Path, default=None,
                       help="write the agreement markdown here (default: stdout)")
 
@@ -294,6 +396,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     rows = load_worksheet(args.worksheet)
+    if args.judge == "live":
+        rows = _fill_unscored_rows(
+            rows, worksheet_path=args.worksheet, report_path=args.report
+        )
     result = agreement(rows)
     report_md = _agreement_markdown(result)
     if args.out is None:

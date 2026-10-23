@@ -13,6 +13,7 @@ Covered here:
 """
 
 import base64
+from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs
 
 import httpx
@@ -29,7 +30,7 @@ from app.adapters.twilio import (
     TwilioChannelTransientError,
     select_whatsapp_channel,
 )
-from app.ports.messaging import OutboundMessage
+from app.ports.messaging import InboundMessage, OutboundMessage
 from app.settings import settings
 
 ADAPTER = TwilioChannelAdapter(
@@ -40,6 +41,21 @@ ADAPTER = TwilioChannelAdapter(
     whatsapp_from="whatsapp:+14155238886",
 )
 MESSAGES_URL = f"{TWILIO_BASE_URL}/2010-04-01/Accounts/ACsubaccount/Messages.json"
+
+
+def open_window(adapter: TwilioChannelAdapter) -> None:
+    """A free-form send is only allowed within the 24h customer service
+    window (F12 S1); an inbound message opens it."""
+
+    adapter.handle_inbound(
+        InboundMessage(
+            provider_message_id="SMin-window",
+            sender_ref="+34600111222",
+            body="Hola",
+            received_at=datetime.now(UTC) - timedelta(hours=1),
+            quick_reply_id=None,
+        )
+    )
 
 
 def outbound() -> OutboundMessage:
@@ -56,6 +72,7 @@ def test_send_message_posts_with_api_key_auth_and_returns_sid() -> None:
     route = respx.post(MESSAGES_URL).mock(
         return_value=Response(201, json={"sid": "SMfake0001"})
     )
+    open_window(ADAPTER)
 
     sid = ADAPTER.send_message(outbound())
 
@@ -74,6 +91,7 @@ def test_send_message_posts_with_api_key_auth_and_returns_sid() -> None:
 @respx.mock
 def test_transport_error_is_transient() -> None:
     respx.post(MESSAGES_URL).mock(side_effect=httpx.ConnectError("connection refused"))
+    open_window(ADAPTER)
 
     with pytest.raises(TwilioChannelTransientError):
         ADAPTER.send_message(outbound())
@@ -83,6 +101,7 @@ def test_transport_error_is_transient() -> None:
 def test_server_error_is_transient() -> None:
     respx.post(MESSAGES_URL).mock(return_value=Response(502, text="bad gateway"))
     respx.post(MESSAGES_URL + "throttled").mock(return_value=Response(429, text="slow"))
+    open_window(ADAPTER)
 
     with pytest.raises(TwilioChannelTransientError):
         ADAPTER.send_message(outbound())
@@ -110,6 +129,7 @@ def test_account_auth_fallback_when_no_api_key() -> None:
         auth_token="fallbacktoken",
         whatsapp_from="whatsapp:+14155238886",
     )
+    open_window(adapter)
 
     sid = adapter.send_message(outbound())
 

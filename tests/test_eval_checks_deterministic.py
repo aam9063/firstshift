@@ -220,10 +220,10 @@ def clean_record():
 # ------------------------------------------------------------- shape and run
 
 
-def test_run_deterministic_checks_covers_exactly_the_s2_items() -> None:
+def test_run_deterministic_checks_covers_exactly_the_registered_checks() -> None:
     results = run_deterministic_checks(clean_record())
     assert [r.name for r in results] == list(CHECK_NAMES)
-    assert len(results) == 6
+    assert len(results) == 7
     assert all(r.passed for r in results), [r.evidence for r in results if not r.passed]
     assert all(r.evidence for r in results), "every result carries evidence"
 
@@ -239,6 +239,7 @@ def test_clean_journey_passes_every_check_individually() -> None:
         "no_protected_data_stored",
         "ai_disclosure_first_message",
         "outbound_language_matches",
+        "no_internal_identifiers_in_candidate_messages",
     }
 
 
@@ -548,3 +549,81 @@ def test_outbound_language_matches_fails_when_no_outbound_carries_a_language_tag
     record = make_record(candidate, application, events, audit_events, consents, decisions)
     result = run_deterministic_checks(record)[5]
     assert not result.passed
+
+
+# ------------------- 7. no internal identifiers in candidate messages (F09)
+
+
+def test_no_internal_identifiers_passes_on_a_clean_transcript() -> None:
+    result = run_deterministic_checks(clean_record())[6]
+    assert result.name == "no_internal_identifiers_in_candidate_messages"
+    assert result.passed
+
+
+def test_no_internal_identifiers_fails_on_the_observed_calibration_leak() -> None:
+    candidate, application, events, audit_events, consents, decisions = clean_journey_rows()
+    # The exact body calibration-v1 saw reach the candidate in eval-p002.
+    events.append(
+        make_event(
+            "message.out",
+            {
+                "template": "bench.reserve_backup",
+                "recipient_ref": "bench-backup-sim",
+                "body": "Lumbre Burger: bench.reserve backup",
+            },
+            T0 + 5 * STEP,
+        )
+    )
+    record = make_record(candidate, application, events, audit_events, consents, decisions)
+    result = run_deterministic_checks(record)[6]
+    assert not result.passed
+    assert "bench.reserve" in result.evidence
+
+
+def test_no_internal_identifiers_fails_on_snake_case_and_generic_shapes() -> None:
+    for body in (
+        "Lumbre Burger: bench_reserve_backup",
+        "Lumbre Burger: trainer.notify",
+        "Lumbre Burger: some.unknown_kind",
+    ):
+        candidate, application, events, audit_events, consents, decisions = clean_journey_rows()
+        events.append(
+            make_event("message.out", {"template": "x", "body": body}, T0 + 5 * STEP)
+        )
+        record = make_record(
+            candidate, application, events, audit_events, consents, decisions
+        )
+        result = run_deterministic_checks(record)[6]
+        assert not result.passed, body
+
+
+def test_no_internal_identifiers_tolerates_normal_copy_and_safe_internal_bodies() -> None:
+    candidate, application, events, audit_events, consents, decisions = clean_journey_rows()
+    events.extend(
+        [
+            make_event(
+                "message.out",
+                {
+                    "template": "trainer.notify",
+                    "recipient_ref": "trainer-sim",
+                    "body": (
+                        "Aviso interno del sistema de contratacion: revisa el "
+                        "panel de operaciones."
+                    ),
+                },
+                T0 + 5 * STEP,
+            ),
+            make_event(
+                "message.out",
+                {
+                    "template": "offer",
+                    "recipient_ref": "+34600111222",
+                    "body": "Oferta de empleo de Lumbre Burger: responde SI para aceptar.",
+                },
+                T0 + 6 * STEP,
+            ),
+        ]
+    )
+    record = make_record(candidate, application, events, audit_events, consents, decisions)
+    result = run_deterministic_checks(record)[6]
+    assert result.passed, result.evidence

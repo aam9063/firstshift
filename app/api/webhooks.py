@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.simulator import channel as simulator_channel
 from app.api.deps import get_session
+from app.core.degraded import known_statuses, pause_for_event
 from app.core.state_machine import (
     Actor,
     ActorKind,
@@ -37,13 +38,17 @@ from app.core.state_machine import (
 from app.db.events import EventEnvelope, EventType, append_event
 from app.db.models import Application, AuditEvent, Candidate, OutboxMessage, Restaurant
 from app.ports.messaging import OutboundMessage
+from app.services.scripted import candidate_language
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 NOTICE_VERSION = "v1"
 
 # Scripted first contact (design row 2): carries the AI disclosure and the
-# notice version, in the candidate's language (Spanish by default).
+# notice version. The body is the Spanish intake default: it is sent before
+# the candidate has stated any preference in-channel, so C-O4's temporal rule
+# cannot be violated; every composition after the candidate's first inbound
+# follows the candidate's stated preferred language.
 FIRST_MESSAGE_TEMPLATE = (
     "Hola {first_name}: soy el asistente virtual de contratación de Lumbre Burger "
     "para {restaurant_name}. Soy una IA y trato tus datos según el aviso de "
@@ -70,6 +75,88 @@ class HireDeskNewApplication(BaseModel):
     first_name: str | None = None
     phone: str | None = None
     source: str = "qr"
+    # The application's stated language, when HireDesk knows it. None (the
+    # real webhook today) keeps the Spanish intake default. It is the
+    # candidate's preferred language from creation, so every later
+    # composition (timer nudges, canned guard replies) uses it without
+    # waiting for save_language_tag.
+    language: str | None = None
+
+
+def _pause_first_contact(
+    session: Session,
+    *,
+    application: Application,
+    candidate: Candidate,
+    flow: str,
+    system: str,
+    trace_id: str,
+    now: datetime,
+    language: str,
+) -> None:
+    """Persist one paused first contact (F12 T2, S4): the audit record, the
+    message.out event and the holding message from the versioned catalog as a
+    confirmed outbox row. The application state is not touched."""
+    from app.services.scripted import candidate_body, candidate_language
+
+    tag = candidate_language(language)
+    body = candidate_body("holding", tag)
+    if body is None:  # pragma: no cover - catalog is versioned and complete
+        raise HTTPException(status_code=500, detail="no holding copy configured")
+    outbox_id = uuid4()
+    session.add(
+        OutboxMessage(
+            id=outbox_id,
+            port="whatsapp",
+            operation="send",
+            payload={
+                "recipient_ref": candidate.phone,
+                "body": body,
+                "quick_replies": [],
+                "correlation_id": trace_id,
+                "template": "holding",
+                "language": tag,
+            },
+            idempotency_key=(
+                f"fs/whatsapp/send/{candidate.id}/{application.id}/{outbox_id}"
+            ),
+            status="api_confirmed",
+            related_entity_id=candidate.id,
+        )
+    )
+    session.add(
+        AuditEvent(
+            id=uuid4(),
+            occurred_at=now,
+            actor_type="system",
+            actor_id="firstshift.degraded_mode",
+            application_id=application.id,
+            candidate_id=candidate.id,
+            event_type="flow.paused",
+            payload={
+                "flow": flow,
+                "required_system": system,
+                "reason": f"required client system '{system}' is degraded; flow '{flow}' paused",
+                "template": "holding",
+            },
+        )
+    )
+    append_event(
+        session,
+        EventEnvelope(
+            type=EventType.MESSAGE_OUT,
+            candidate_id=candidate.id,
+            trace_id=trace_id,
+            occurred_at=now,
+            payload={
+                "template": "holding",
+                "recipient_ref": candidate.phone,
+                "body": body,
+                "language": tag,
+                "correlation_id": trace_id,
+            },
+        ),
+    )
 
 
 @router.post("/hiredesk", status_code=201, response_model=None)
@@ -101,12 +188,17 @@ def hiredesk_webhook(
     now = datetime.now(UTC)
     applied_at = payload.applied_at or now
 
+    # The language source of truth: the stated intake language when supported,
+    # the Spanish intake default when nothing states otherwise (candidate_language
+    # normalizes unsupported values to the documented last resort).
+    language = candidate_language(payload.language)
+
     candidate = Candidate(
         id=uuid4(),
         brand_id=restaurant.brand_id,
         first_name=payload.first_name or "Candidato",
         phone=payload.phone or "+34600000000",
-        preferred_language="es",
+        preferred_language=language,
         hiredesk_candidate_id=payload.candidate_id,
         state=State.NEW.value,
         source=payload.source,
@@ -146,12 +238,36 @@ def hiredesk_webhook(
         ),
     )
 
+    # S4 degraded mode: when the channel is degraded, first contact pauses.
+    # The candidate is created (the application row is the client's record),
+    # the state does not advance, and the candidate receives the holding
+    # message instead of silence.
+    pause = pause_for_event("intake_processed", known_statuses())
+    if pause is not None:
+        flow, system = pause
+        _pause_first_contact(
+            session,
+            application=application,
+            candidate=candidate,
+            flow=flow,
+            system=system,
+            trace_id=trace_id,
+            now=now,
+            language=language,
+        )
+        return {
+            "status": "paused",
+            "candidate_id": str(candidate.id),
+            "application_id": str(application.id),
+            "paused_by": system,
+        }
+
     result = StateMachine().dispatch(
         CoreApplication(application_id=str(application.id), state=State.NEW),
         "intake_processed",
         Actor(ActorKind.SYSTEM, "firstshift-webhook"),
         now=now,
-        payload={"notice_version": NOTICE_VERSION, "ai_disclosed": True, "language": "es"},
+        payload={"notice_version": NOTICE_VERSION, "ai_disclosed": True, "language": language},
     )
     if not result.transitioned or result.to_state is None:
         # Unreachable while the guard payload is fixed above; fail loudly

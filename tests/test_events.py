@@ -85,6 +85,7 @@ def test_typed_event_types_exist() -> None:
         "agent.turn",
         "tool.call",
         "unmatched.inbound",
+        "escalation.created",
     }
 
 
