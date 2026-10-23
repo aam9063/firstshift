@@ -512,7 +512,9 @@ def _failure_modes(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return modes
 
 
-def _decisions(modes: list[dict[str, Any]], escalations: list[dict[str, Any]]) -> list[dict]:
+def _decisions(
+    modes: list[dict[str, Any]], escalations: list[dict[str, Any]], days: int
+) -> list[dict]:
     """Decisions the client must take, each traced to an observed failure
     mode or escalation count. Rendered only when the evidence exists."""
     decisions: list[dict] = []
@@ -532,7 +534,7 @@ def _decisions(modes: list[dict[str, Any]], escalations: list[dict[str, Any]]) -
                 ),
                 "evidence": (
                     f"{decision_escalations['count']} decision SLA breaches fired "
-                    "in 30 simulated days"
+                    f"in {days} simulated days"
                 ),
             }
         )
@@ -548,7 +550,7 @@ def _decisions(modes: list[dict[str, Any]], escalations: list[dict[str, Any]]) -
                     "DPIA: candidates volunteer protected information unprompted "
                     "and the agent declines to store it every time"
                 ),
-                "evidence": f"{protected['count']} refusals in 30 simulated days",
+                "evidence": f"{protected['count']} refusals in {days} simulated days",
             }
         )
     unrefused = counts.get("volunteered protected data without a recorded refusal")
@@ -565,7 +567,7 @@ def _decisions(modes: list[dict[str, Any]], escalations: list[dict[str, Any]]) -
                 ),
                 "evidence": (
                     f"{unrefused} candidates volunteered protected data with no "
-                    "recorded refusal in 30 simulated days"
+                    f"recorded refusal in {days} simulated days"
                 ),
             }
         )
@@ -804,7 +806,7 @@ def run_pilot(
             "failure_modes": _failure_modes(records),
             "escalations": escalations,
             "fairness": [asdict(row) for row in fairness_rows],
-            "decisions": _decisions(_failure_modes(records), escalations),
+            "decisions": _decisions(_failure_modes(records), escalations, days),
         }
 
     out_dir.mkdir(parents=True, exist_ok=True)
