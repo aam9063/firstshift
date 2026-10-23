@@ -8,7 +8,8 @@
   so the demo candidate pane shows it.
 - POST /api/restaurants/{id}/pause: pause (and resume) all agents for one
   restaurant, audited per restaurant code.
-- POST /api/outbox/{id}/replay: reuses app/outbox/relay.relay_pending on a
+- POST /api/outbox/{id}/replay is owned by app/api/outbox.py (F12): the console
+  router no longer registers it, so the path has a single owner.
   dead-lettered row; only failed hiredesk rows can be replayed in this
   milestone (the relay's async-port set).
 - POST /api/erasure-requests: records the DPO's erasure request as an audit
@@ -17,13 +18,11 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from app.api.console.helpers import (
@@ -43,14 +42,11 @@ from app.api.console.schemas import (
     PauseBody,
     PauseResponse,
     ReleaseResponse,
-    ReplayResponse,
     TakeoverResponse,
 )
 from app.api.deps import get_session
 from app.db.events import EventEnvelope, EventType, append_event
-from app.db.models import OutboxMessage, Restaurant
-from app.outbox.relay import relay_pending
-from app.settings import settings
+from app.db.models import Restaurant
 
 router = APIRouter(prefix="/api", tags=["console-actions"])
 
@@ -174,58 +170,6 @@ def pause_restaurant(
     )
     return PauseResponse(
         restaurant_id=str(restaurant.id), code=restaurant.code, paused=not resume
-    )
-
-
-@router.post("/outbox/{message_id}/replay", response_model=ReplayResponse)
-def replay_outbox_message(
-    message_id: UUID, session: SessionDep, role: RoleDep
-) -> ReplayResponse:
-    row = session.get(OutboxMessage, message_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="unknown outbox message")
-    if row.status != "failed":
-        raise HTTPException(
-            status_code=409,
-            detail=f"only dead-lettered (failed) rows can be replayed; row is {row.status}",
-        )
-    if row.port != "hiredesk":
-        raise HTTPException(
-            status_code=409,
-            detail="replay is wired for the hiredesk async port only in this milestone",
-        )
-
-    # Back on the schedule with a fresh attempt budget, then one relay pass
-    # reusing the existing relay logic (claim, deliver, retry or dead-letter).
-    row.status = "pending"
-    row.attempts = 0
-    row.next_retry_at = None
-    append_audit(
-        session,
-        event_type="outbox.replay",
-        actor_id=f"console:{role}",
-        payload={
-            "role": role,
-            "outbox_id": str(row.id),
-            "idempotency_key": row.idempotency_key,
-            "port": str(row.port),
-            "operation": row.operation,
-        },
-    )
-    session.commit()  # the relay uses its own sessions and must see this row
-
-    from app.adapters.hiredesk import HireDeskAdapter
-
-    engine = session.get_bind()
-    assert isinstance(engine, Engine)  # get_bind on an ORM session is an Engine
-    adapter = HireDeskAdapter.from_settings(settings)
-    relay_pending(engine, adapter, now=datetime.now(UTC))
-
-    session.expire_all()
-    refreshed = session.get(OutboxMessage, message_id)
-    assert refreshed is not None
-    return ReplayResponse(
-        id=str(refreshed.id), status=refreshed.status, attempts=refreshed.attempts
     )
 
 

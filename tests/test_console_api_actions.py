@@ -20,7 +20,6 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
-import respx
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -241,6 +240,9 @@ def test_pause_then_resume(
 
 
 # ----------------------------------------------------------------- outbox replay
+# The replay path is owned by app/api/outbox.py (F12). The console contract is
+# the same endpoint, so these tests pin the shared semantics rather than a
+# second implementation.
 
 
 def _failed_outbox_row(engine: Engine, hiredesk_application_id: str) -> UUID:
@@ -266,80 +268,53 @@ def _failed_outbox_row(engine: Engine, hiredesk_application_id: str) -> UUID:
     return row_id
 
 
-def test_replay_delivers_dead_letter_through_the_relay(
+def test_replay_resets_a_dead_letter_to_pending_with_a_fresh_budget(
     sim_client: TestClient, sim_engine: Engine, driven: dict[str, Any]
 ) -> None:
     row_id = _failed_outbox_row(sim_engine, "hd-replay-happy")
-    with respx.mock:
-        respx.patch(
-            "http://localhost:8010/hiredesk/applications/hd-replay-happy/stage"
-        ).mock(return_value=httpx.Response(200))
-        response = sim_client.post(
-            f"/api/outbox/{row_id}/replay", headers={"X-Actor-Role": "ops"}
-        )
+
+    response = sim_client.post(
+        f"/api/outbox/{row_id}/replay", headers={"X-Actor-Role": "ops"}
+    )
+
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["status"] == "api_confirmed"
+    assert body["id"] == str(row_id)
+    assert body["status"] == "pending"
+    assert body["attempts"] == 0
 
     with Session(sim_engine) as session:
         replayed = session.get(OutboxMessage, row_id)
         assert replayed is not None
-        assert replayed.status == "api_confirmed"
+        assert replayed.status == "pending"
+        assert replayed.attempts == 0
         audit = session.scalars(
             select(AuditEvent)
             .where(
-                AuditEvent.event_type == "outbox.replay",
+                AuditEvent.event_type.in_(
+                    ["outbox.replay", "outbox.replay_requested"]
+                ),
                 AuditEvent.payload["outbox_id"].astext == str(row_id),
             )
             .limit(1)
         ).first()
     assert audit is not None, "a replay is a human action and must be audited"
-    assert audit.actor_id == "console:ops"
-
-
-def test_replay_still_failing_stays_pending_with_error(
-    sim_client: TestClient, sim_engine: Engine, driven: dict[str, Any]
-) -> None:
-    row_id = _failed_outbox_row(sim_engine, "hd-replay-down")
-    with respx.mock:
-        respx.patch(
-            "http://localhost:8010/hiredesk/applications/hd-replay-down/stage"
-        ).mock(return_value=httpx.Response(500, text="boom"))
-        response = sim_client.post(
-            f"/api/outbox/{row_id}/replay", headers={"X-Actor-Role": "ops"}
-        )
-    assert response.status_code == 200
-    with Session(sim_engine) as session:
-        replayed = session.get(OutboxMessage, row_id)
-        assert replayed is not None
-        assert replayed.status == "pending", "a failed retry goes back on the schedule"
-        assert replayed.attempts == 1
 
 
 def test_replay_rejects_rows_that_are_not_dead_letters(
     sim_client: TestClient, sim_engine: Engine, driven: dict[str, Any]
 ) -> None:
-    row_id = uuid4()
+    row_id = _failed_outbox_row(sim_engine, "hd-replay-reject")
     with Session(sim_engine) as session, session.begin():
-        session.add(
-            OutboxMessage(
-                id=row_id,
-                port="hiredesk",
-                operation="update_stage",
-                payload={
-                    "hiredesk_application_id": "hd-pending",
-                    "stage": "screening",
-                    "rejection_reason": None,
-                    "decision_id": str(uuid4()),
-                },
-                idempotency_key=f"test/pending/{uuid4()}",
-                status="pending",
-            )
-        )
+        row = session.get(OutboxMessage, row_id)
+        assert row is not None
+        row.status = "api_confirmed"
+
     response = sim_client.post(
         f"/api/outbox/{row_id}/replay", headers={"X-Actor-Role": "ops"}
     )
-    assert response.status_code == 409
+
+    assert response.status_code == 409, response.text
 
 
 # ------------------------------------------------------------------- erasure

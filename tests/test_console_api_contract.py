@@ -21,9 +21,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import httpx
 import pytest
-import respx
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.engine import Engine
@@ -543,18 +541,22 @@ def test_outbox_replay_contract(
             )
         )
 
-    with respx.mock:
-        respx.patch(
-            "http://localhost:8010/hiredesk/applications/hd-replay-shape/stage"
-        ).mock(return_value=httpx.Response(200))
-        replayed = sim_client.post(
-            f"/api/outbox/{message_id}/replay", headers={"X-Actor-Role": "ops"}
-        )
+    replayed = sim_client.post(
+        f"/api/outbox/{message_id}/replay", headers={"X-Actor-Role": "ops"}
+    )
     assert replayed.status_code == 200, replayed.text
     body = replayed.json()
-    assert_shape(body, REPLAY_RESPONSE, "replay response")
-    assert body["status"] == "api_confirmed"
-    assert isinstance(body["attempts"], int)
+    # The path is owned by app/api/outbox.py (F12): it resets the dead letter
+    # and the relay delivers it on its next pass, so the response is the reset
+    # row. The console uses id, status and attempts; extra diagnostic keys
+    # (port, operation, idempotency_key) are allowed and useful in /ops.
+    for key, kind in REPLAY_RESPONSE.items():
+        assert key in body, f"replay response is missing '{key}'"
+        assert isinstance(body[key], kind), (
+            f"replay response '{key}' should be {kind}, got {type(body[key])}"
+        )
+    assert body["status"] == "pending"
+    assert body["attempts"] == 0
 
 
 def test_erasure_request_contract(
