@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     openai_model: str = "gpt-4.1-mini"
 
+    # Mock client systems (F12 T1): base URL the adapters point at; swapping
+    # a mock for a real adapter stays configuration (architecture rule 2).
+    mocks_base_url: str = "http://localhost:8010"
+
     # Model port (F07 T1): scripted by default so tests and demos never touch
     # the network. LLM_MODE=live selects the Strands OpenAI provider, which
     # requires OPENAI_API_KEY.

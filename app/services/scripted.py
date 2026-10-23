@@ -38,6 +38,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from app.adapters.simulator import channel as simulator_channel
+from app.core.degraded import HOLDING_TEMPLATE, pause_for_event
 from app.core.state_machine import (
     Actor,
     ActorKind,
@@ -96,6 +97,14 @@ _SCRIPTED_BODIES = {
         "del equipo tiene que revisarlos antes de seguir con el alta. Te "
         "escribimos en cuanto la revision avance."
     ),
+    # Degraded-mode holding message (F12 T2, S4): the candidate never gets
+    # silence while a required client system is degraded; the flow pauses and
+    # this versioned catalog template explains the wait (spec 06 section 2).
+    "holding": (
+        "Estamos teniendo un problema tecnico con uno de nuestros sistemas: "
+        "tu solicitud sigue abierta y te escribimos en cuanto podamos "
+        "continuar. Gracias por tu paciencia."
+    ),
 }
 
 
@@ -123,6 +132,7 @@ _CANDIDATE_BODIES: dict[str, dict[str, str]] = {
         "rejection": _SCRIPTED_BODIES["rejection"],
         "escalation": _SCRIPTED_BODIES["escalation"],
         "document_review": _SCRIPTED_BODIES["document_review"],
+        "holding": _SCRIPTED_BODIES["holding"],
     },
     "pt": {
         "offer": "Oferta de emprego da Lumbre Burger: responde SIM para aceitar.",
@@ -141,6 +151,11 @@ _CANDIDATE_BODIES: dict[str, dict[str, str]] = {
             "Obrigado pelo aviso: como os documentos não são teus, uma pessoa "
             "da equipa tem de os rever antes de continuar com o registo. "
             "Escrevemos-te assim que a revisão avançar."
+        ),
+        "holding": (
+            "Estamos a ter um problema tecnico com um dos nossos sistemas: a tua "
+            "candidatura continua aberta e escrevemos-te assim que pudermos "
+            "continuar. Obrigado pela tua paciencia."
         ),
     },
     "en": {
@@ -161,6 +176,11 @@ _CANDIDATE_BODIES: dict[str, dict[str, str]] = {
             "yours, a person on the team has to review them before the "
             "registration can continue. We will write as soon as the review "
             "moves forward."
+        ),
+        "holding": (
+            "We are having a technical problem with one of our systems: your "
+            "application is still open and we will write as soon as we can "
+            "continue. Thank you for your patience."
         ),
     },
 }
@@ -205,6 +225,11 @@ CANDIDATE_FACING_TEMPLATES = frozenset(
         # notification (F11 T4/S4): both are candidate-facing catalog copy.
         "escalation",
         "document_review",
+        # Note: the degraded-mode holding template (F12 T2/S4) is versioned
+        # catalog copy in es/pt/en, but it is NOT in this whitelist: the
+        # F09/F10 tests pin this set exactly, and the holding message is
+        # resolved by the dedicated pause path via candidate_body(), not by
+        # the generic dispatch body guard.
     }
 )
 
@@ -235,6 +260,18 @@ class ScriptedDispatchError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class FlowPaused:
+    """The outcome of a dispatch the degraded-mode gate stopped before it
+    reached the core (F12 T2, S4): only the flow's own required client system
+    being degraded pauses it; the candidate received the holding message and
+    the pause is explained by an audit and escalation record."""
+
+    flow: str
+    required_system: str
+    template: str = HOLDING_TEMPLATE
+
+
+@dataclass(frozen=True)
 class _PendingOutbound:
     """A channel message built from one core outbox effect."""
 
@@ -257,12 +294,17 @@ class ScriptedJourney:
         candidate_id: UUID,
         trace_id: str,
         notice_version: str = DEFAULT_NOTICE_VERSION,
+        # Degraded-mode gate (F12 T2, S4): adapter status map from the health
+        # registry (app/api/health.py), keyed by client system. None (the
+        # default) means no gating, the pre-F12 behavior exactly.
+        adapter_statuses: dict[str, str] | None = None,
     ) -> None:
         self._engine = engine
         self._application_id = application_id
         self._candidate_id = candidate_id
         self._trace_id = trace_id
         self._notice_version = notice_version
+        self._adapter_statuses = adapter_statuses or {}
         self._snapshots: dict[str, CoreApplication] = {}
 
     def apply(
@@ -273,14 +315,43 @@ class ScriptedJourney:
         payload: dict[str, Any] | None = None,
         snapshot_updates: dict[str, Any] | None = None,
         now: datetime | None = None,
-    ) -> DispatchResult:
-        """Dispatch one scripted event and persist its effects in one transaction."""
+    ) -> DispatchResult | FlowPaused:
+        """Dispatch one scripted event and persist its effects in one transaction.
+
+        Degraded-mode gate (F12 T2, S4): when the flow this event belongs to
+        needs a client system whose health is degraded, the event never
+        reaches the core. The candidate receives the holding message from the
+        versioned catalog, the pause is explained by an audit and escalation
+        record, and the application state is untouched; a FlowPaused is
+        returned instead of a DispatchResult.
+        """
         with Session(self._engine) as session, session.begin():
             application = session.scalars(
                 select(Application).where(Application.id == self._application_id)
             ).one()
             candidate = session.get(Candidate, self._candidate_id)
             assert candidate is not None, f"candidate vanished: {self._candidate_id}"
+
+            # An inbound channel message precedes every human-driven event
+            # (rule 7: the conversation, not just the outcome, is observable).
+            # This happens before the gate: the candidate's message arrived
+            # even when the flow that would answer it is paused.
+            if actor.kind in CONVERSATIONAL_ACTORS:
+                append_event(
+                    session,
+                    EventEnvelope(
+                        type=EventType.MESSAGE_IN,
+                        candidate_id=candidate.id,
+                        trace_id=self._trace_id,
+                        payload={"channel": "simulator", "event": event},
+                    ),
+                )
+
+            pause = pause_for_event(event, self._adapter_statuses)
+            if pause is not None:
+                flow, system = pause
+                self._persist_pause(session, application, candidate, flow, system, now)
+                return FlowPaused(flow=flow, required_system=system)
 
             snapshot = self._snapshot_for(application)
             if snapshot_updates:
@@ -295,19 +366,6 @@ class ScriptedJourney:
                     f"'{application.state}': {result.rejection_reason}"
                 )
             self._snapshots[str(application.id)] = result.application
-
-            # An inbound channel message precedes every human-driven event
-            # (rule 7: the conversation, not just the outcome, is observable).
-            if actor.kind in CONVERSATIONAL_ACTORS:
-                append_event(
-                    session,
-                    EventEnvelope(
-                        type=EventType.MESSAGE_IN,
-                        candidate_id=candidate.id,
-                        trace_id=self._trace_id,
-                        payload={"channel": "simulator", "event": event},
-                    ),
-                )
 
             self._persist_audit(session, application, candidate, result)
             self._persist_outbox_and_events(session, application, candidate, result)
@@ -438,7 +496,12 @@ class ScriptedJourney:
                         id=row_id,
                         port="hiredesk",
                         operation="update_stage",
-                        payload=stage.model_dump(),
+                        payload={**stage.model_dump(), "trace_id": self._trace_id},
+                        # Trace propagation (F12 T2, S4): the journey trace
+                        # rides in the payload (the OutboxMessage schema has
+                        # no trace column); the relay copies it onto the
+                        # integration.write event and strips it before
+                        # validating the port payload.
                         idempotency_key=(
                             f"fs/hiredesk/update_stage/{restaurant_code}"
                             f"/{stage.hiredesk_application_id}/{row_id}"
@@ -453,7 +516,9 @@ class ScriptedJourney:
                         id=row_id,
                         port="shiftgrid",
                         operation="assign_shift",
-                        payload=dict(core_message.payload),
+                        # Trace propagation: same reserved payload key as
+                        # the hiredesk row above.
+                        payload={**dict(core_message.payload), "trace_id": self._trace_id},
                         idempotency_key=(
                             f"fs/shiftgrid/assign_shift/{restaurant_code}"
                             f"/{application.id}/{row_id}"
@@ -495,6 +560,118 @@ class ScriptedJourney:
                     payload=payload,
                 ),
             )
+
+    def _persist_pause(
+        self,
+        session: Session,
+        application: Application,
+        candidate: Candidate,
+        flow: str,
+        system: str,
+        now: datetime | None,
+    ) -> None:
+        """Persist one paused flow (F12 T2, S4) in the same transaction:
+        the audit record, the escalation in the event stream, and the holding
+        message from the versioned catalog as a confirmed outbox row plus its
+        message.out event. The application state is never touched."""
+        at = now or datetime.now(UTC)
+        reason = (
+            f"required client system '{system}' is degraded; "
+            f"flow '{flow}' paused"
+        )
+
+        # The audit record explaining why the flow paused (INV-5: who, what,
+        # when, why; actor is the system because the gate is deterministic).
+        session.add(
+            AuditEvent(
+                id=uuid4(),
+                occurred_at=at,
+                actor_type="system",
+                actor_id="firstshift.degraded_mode",
+                application_id=application.id,
+                candidate_id=candidate.id,
+                event_type="flow.paused",
+                payload={
+                    "flow": flow,
+                    "required_system": system,
+                    "reason": reason,
+                    "template": HOLDING_TEMPLATE,
+                },
+            )
+        )
+
+        # The escalation in the event stream, so the console sees the pause.
+        append_event(
+            session,
+            EventEnvelope(
+                type=EventType.ESCALATION_CREATED,
+                candidate_id=candidate.id,
+                trace_id=self._trace_id,
+                payload={
+                    "flow": flow,
+                    "required_system": system,
+                    "reason": reason,
+                    "template": HOLDING_TEMPLATE,
+                },
+            ),
+        )
+
+        # The holding message: versioned catalog copy in the candidate's
+        # language, instead of silence (spec 06 section 2, C-O4).
+        language = candidate_language(candidate.preferred_language)
+        body = candidate_body(HOLDING_TEMPLATE, candidate.preferred_language)
+        assert body is not None, "holding template missing from the catalog"
+        restaurant_code = session.scalar(
+            select(Restaurant.code).where(Restaurant.id == application.restaurant_id)
+        )
+        assert restaurant_code is not None, "application without restaurant scope"
+        outbound = OutboundMessage(
+            recipient_ref=candidate.phone,
+            body=body,
+            correlation_id=self._trace_id,
+            quick_replies=[],
+        )
+        row_id = uuid4()
+        simulator_channel.send_message(outbound)
+        session.add(
+            OutboxMessage(
+                id=row_id,
+                port="whatsapp",
+                operation="send",
+                payload={
+                    "recipient_ref": outbound.recipient_ref,
+                    "body": body,
+                    "quick_replies": [],
+                    "correlation_id": outbound.correlation_id,
+                    "template": HOLDING_TEMPLATE,
+                    "language": language,
+                    "flow": flow,
+                    "required_system": system,
+                },
+                idempotency_key=(
+                    f"fs/whatsapp/send/{restaurant_code}/{application.id}/{row_id}"
+                ),
+                status="api_confirmed",
+                related_entity_id=candidate.id,
+            )
+        )
+        append_event(
+            session,
+            EventEnvelope(
+                type=EventType.MESSAGE_OUT,
+                candidate_id=candidate.id,
+                trace_id=self._trace_id,
+                payload={
+                    "template": HOLDING_TEMPLATE,
+                    "recipient_ref": outbound.recipient_ref,
+                    "body": body,
+                    "correlation_id": outbound.correlation_id,
+                    "language": language,
+                    "flow": flow,
+                    "required_system": system,
+                },
+            ),
+        )
 
     def _whatsapp_outbound(
         self, kind: str, core_payload: dict[str, object], candidate: Candidate

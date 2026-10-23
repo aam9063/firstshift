@@ -117,10 +117,30 @@ def _build_payload(message: dict[str, Any]) -> StageUpdate:
 
     A payload the port schema rejects can never succeed on retry, so the
     caller dead-letters it immediately (never retried, contracts taxonomy).
+    The reserved ``trace_id`` key (trace propagation, F12 T2/S4) is not part
+    of the port schema and is stripped here; the attempt recorder reads it
+    straight from the stored payload.
     """
     if message["operation"] not in STAGE_OPERATIONS:
         raise PayloadRejected(f"unknown async operation: {message['operation']}")
-    return StageUpdate.model_validate(message["payload"])
+    payload_data = {
+        key: value for key, value in message["payload"].items() if key != "trace_id"
+    }
+    return StageUpdate.model_validate(payload_data)
+
+
+def _journey_trace(message: dict[str, Any]) -> str:
+    """The candidate journey's trace id for one outbox message (F12 T2/S4).
+
+    The outbox schema has no trace column, so the dispatch path puts the
+    journey trace under the reserved ``trace_id`` payload key. Rows written
+    before that change (or by paths that do not set it) fall back to the
+    outbox row id, the pre-F12 behavior.
+    """
+    trace = message["payload"].get("trace_id")
+    if isinstance(trace, str) and trace:
+        return trace
+    return str(message["id"])
 
 
 def _record_attempt(
@@ -131,13 +151,18 @@ def _record_attempt(
     now: datetime,
     error: str | None,
 ) -> None:
-    """Every attempt emits one typed integration.write event (rule 7, C-T6)."""
+    """Every attempt emits one typed integration.write event (rule 7, C-T6).
+
+    The event carries the candidate journey's trace id, not the outbox row
+    id, so the journey is traceable across messages, state transitions and
+    integration calls end to end (F12 T2, S4).
+    """
     with engine.begin() as conn:
         append_event(
             conn,
             EventEnvelope(
                 type=EventType.INTEGRATION_WRITE,
-                trace_id=str(message["id"]),  # maps the event back to one message
+                trace_id=_journey_trace(message),
                 payload={
                     "outbox_id": str(message["id"]),
                     "port": message["port"],
@@ -177,6 +202,10 @@ def _record_dead_letter(engine: Engine, message: dict[str, Any], attempts: int, 
                     ),
                     "attempts": attempts,
                     "error": error,
+                    # Trace propagation (F12 T2/S4): the dead-letter audit
+                    # names the journey too, so IT can find every attempt of
+                    # one candidate journey by trace id.
+                    "trace_id": _journey_trace(message),
                 },
                 idempotency_key=message["idempotency_key"],
             )
