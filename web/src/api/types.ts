@@ -234,6 +234,284 @@ export interface IntegrationWrite {
   idempotencyKey: string;
 }
 
+/* Restaurant list and detail (GET /api/restaurants, app/api/console/schemas.py
+   RestaurantRow / ShiftRow / RestaurantShiftsResponse) */
+
+export type Cohort = "pilot" | "control";
+
+export interface RestaurantRow {
+  id: string;
+  code: string;
+  name: string;
+  city: string;
+  cohort: Cohort;
+  openShifts: number;
+  /** 0..100, covered shifts / open shifts. */
+  coveredPct: number;
+  bench: number;
+  openCandidates: number;
+  /** "" when no manager decision is recorded. */
+  managerMedianReply: string;
+  paused: boolean;
+}
+
+export interface ShiftRow {
+  id: string;
+  label: string;
+  startsAt: string;
+  endsAt: string;
+  role: string;
+  requiresFoodHygiene: boolean;
+  status: string;
+  matchedCandidateId: string | null;
+  matchedCandidateName: string | null;
+}
+
+export interface RestaurantShiftsResponse {
+  restaurant: RestaurantRow;
+  shifts: ShiftRow[];
+}
+
+/* Operations queues (GET /api/escalations returns AttentionItem[], see above;
+   GET /health/adapters; GET /api/outbox?status=failed) */
+
+export interface AdapterHealth {
+  system: string;
+  status: "ok" | "degraded" | "unknown";
+  lastCheckedAt: string;
+  failureReason: string | null;
+}
+
+export interface AdaptersHealthResponse {
+  adapters: AdapterHealth[];
+}
+
+export interface OutboxMessageRow {
+  id: string;
+  port: string;
+  operation: string;
+  status: string;
+  attempts: number;
+  lastError: string | null;
+  idempotencyKey: string;
+}
+
+export interface OutboxListResponse {
+  status: string;
+  messages: OutboxMessageRow[];
+}
+
+export interface PauseResponse {
+  restaurantId: string;
+  code: string;
+  paused: boolean;
+}
+
+export interface ReplayResponse {
+  id: string;
+  status: string;
+  attempts: number;
+}
+
+/* Audit log (GET /api/audit) */
+
+export interface AuditRow {
+  id: string;
+  at: string;
+  actorType: ActorType;
+  actorLabel: string;
+  eventType: string;
+  stateFrom: string | null;
+  stateTo: string | null;
+  summary: string;
+  payload: Record<string, unknown>;
+}
+
+export interface AuditResponse {
+  items: AuditRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/* Evals (GET /api/evals is camelCase; GET /api/evals/{version} returns the
+   runner report JSON verbatim, so its fields stay snake_case) */
+
+export interface EvalSummaryRow {
+  version: string;
+  label: string;
+  generatedAt: string;
+  taskSuccessRate: number | null;
+  costPerHireUsd: number | null;
+}
+
+export interface EvalMeta {
+  suite: string;
+  seed: number;
+  label: string;
+  generated_at: string;
+  persona_count?: number;
+  judge_model?: string;
+  elapsed_seconds?: number;
+}
+
+export interface EvalSummary {
+  task_success: number;
+  task_success_rate: number;
+  deterministic_failures: number;
+  interview_show_rate: number;
+  day1_show_rate: number;
+  median_ttfps_hours: number;
+  total_cost_usd: number;
+  cost_per_hired_usd: number;
+  mean_judge_score: number;
+}
+
+export interface EvalCheckStat {
+  passed: number;
+  failed: number;
+}
+
+export interface EvalDeterministicChecks {
+  failing: number;
+  checked_conversations: number;
+  per_check: Record<string, EvalCheckStat>;
+}
+
+export interface EvalTranscriptLine {
+  role: string;
+  text: string;
+}
+
+export interface EvalConversation {
+  persona_id: string;
+  label: string;
+  conversation_id: string;
+  trace_id: string;
+  scenario: string;
+  final_state: string;
+  expected_outcome: string;
+  task_success: boolean;
+  task_detail: string;
+  judge_mean: number;
+  judge_scores: Record<string, number>;
+  transcript: EvalTranscriptLine[];
+}
+
+export interface EvalFairnessRow {
+  dimension: string;
+  group: string;
+  n: number;
+  selected: number;
+  rate: number;
+  ratio: number;
+  flagged: boolean;
+}
+
+export interface EvalCost {
+  conversations: number;
+  turns: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_usd: number;
+  p95_latency_ms: number;
+  hired: number;
+  cost_per_hired_usd: number;
+  per_conversation: {
+    conversation_id: string;
+    turns: number;
+    input_tokens: number;
+    output_tokens: number;
+    usd: number;
+    p95_latency_ms: number;
+  }[];
+}
+
+export interface EvalReport {
+  meta: EvalMeta;
+  summary: EvalSummary;
+  deterministic_checks: EvalDeterministicChecks;
+  conversations: EvalConversation[];
+  worst_5: EvalConversation[];
+  funnel: Record<string, number>;
+  fairness: EvalFairnessRow[];
+  cost: EvalCost;
+  comparison: { previous_label: string | null; summary: EvalSummary | null } | null;
+  what_changed: string | null;
+}
+
+/* Simulator (GET /simulator/messages returns the OutboundMessage port shape;
+   POST /api/sim/* return plain dicts from app/api/sim.py and app/sim/runner.py) */
+
+export interface SimulatorMessage {
+  recipientRef: string;
+  body: string;
+  quickReplies: string[];
+  correlationId: string;
+}
+
+export interface SimScenarioLoadResponse {
+  status: string;
+  scenarioId: string;
+  state: string;
+  manager?: { id?: string; name?: string } & Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface SimClockAdvanceResponse {
+  status: string;
+  now: string;
+  state: string;
+  timers_fired: Record<string, unknown>[];
+  timers_skipped: { timer: string; reason: string }[];
+}
+
+export interface SimClockAdvanceInput {
+  minutes?: number;
+  hours?: number;
+  days?: number;
+  next_timer?: boolean;
+}
+
+export interface SimMessageResponse {
+  status: string;
+  role: string;
+  event: string | null;
+  transitioned: boolean;
+  state: string;
+  trace_id: string;
+}
+
+export interface SimMessageInput {
+  role: "candidate" | "manager" | "system";
+  text: string;
+  event?: string;
+  payload?: Record<string, unknown>;
+  application_id?: string;
+}
+
+/* Compliance (POST /api/erasure-requests, CamelModel response) */
+
+export interface ErasureResponse {
+  id: string;
+  candidateId: string;
+  status: string;
+  requestedAt: string;
+}
+
+export interface ErasureInput {
+  candidateId: string;
+  reason?: string;
+}
+
+export interface AuditQuery {
+  q?: string;
+  eventType?: string;
+  candidateId?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface CandidateDetail {
   id: string;
   firstName: string;

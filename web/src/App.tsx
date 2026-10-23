@@ -5,12 +5,19 @@ import { CandidateJourneyPage } from "./features/journey/CandidateJourneyPage";
 import { CandidatesPage } from "./features/candidates/CandidatesPage";
 import { LiveActivityPage } from "./features/live/LiveActivityPage";
 import { OverviewPage } from "./features/overview/OverviewPage";
+import { RestaurantDetailPage } from "./features/restaurants/RestaurantDetailPage";
+import { RestaurantsPage } from "./features/restaurants/RestaurantsPage";
+import { OpsPage } from "./features/ops/OpsPage";
+import { EvalsPage } from "./features/evals/EvalsPage";
+import { CompliancePage } from "./features/compliance/CompliancePage";
+import { SimulatorPage } from "./features/simulator/SimulatorPage";
 import { HealthStatus } from "./components/HealthStatus";
 
 const queryClient = new QueryClient();
 
-/* Views outside the three mockups are placeholders in this feature
-   (odd/tasks/console-ui.md, S3). */
+/* The compliance spec view (specs/04b-console.md section 3.8) is the only
+   route without its own page component left; it renders the health check as a
+   placeholder until a dedicated feature lands. */
 function PlaceholderPage({ title }: { title: string }) {
   return (
     <div>
@@ -44,19 +51,22 @@ export default function App() {
             path="/candidates/:id"
             element={<AppShell><CandidateJourneyPage /></AppShell>}
           />
-          {["/restaurants", "/ops", "/simulator", "/evals", "/compliance"].map(
-            (path) => (
-              <Route
-                key={path}
-                path={path}
-                element={
-                  <AppShell>
-                    <PlaceholderPage title={path.replace("/", "").replace(/^\w/, (c) => c.toUpperCase())} />
-                  </AppShell>
-                }
-              />
-            ),
-          )}
+          <Route
+            path="/restaurants"
+            element={<AppShell><RestaurantsPage /></AppShell>}
+          />
+          <Route
+            path="/restaurants/:id"
+            element={<AppShell><RestaurantDetailPage /></AppShell>}
+          />
+          <Route path="/ops" element={<AppShell><OpsPage /></AppShell>} />
+          <Route path="/evals" element={<AppShell><EvalsPage /></AppShell>} />
+          <Route path="/compliance" element={<AppShell><CompliancePage /></AppShell>} />
+          <Route path="/simulator" element={<AppShell><SimulatorPage /></AppShell>} />
+          <Route
+            path="*"
+            element={<AppShell><PlaceholderPage title="Not found" /></AppShell>}
+          />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
