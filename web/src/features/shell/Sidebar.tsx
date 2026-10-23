@@ -13,16 +13,16 @@ interface NavSection {
   items: NavItem[];
 }
 
-/* Navigation matches specs/04b-console.md section 3; views outside the three
-   mockups (candidates list, escalations, evals, compliance, simulator) are
-   placeholders in this feature. */
+/* Navigation matches specs/04b-console.md section 3. Below 1024px it renders
+   as a drawer (odd/tasks/console-live.md T4); onClose runs on navigation so
+   the drawer closes after choosing a view. */
 const SECTIONS: NavSection[] = [
   {
     heading: "Workspace",
     items: [
       { to: "/", label: "Overview", icon: "overview" },
       { to: "/live", label: "Live activity", icon: "pulse", live: true },
-      { to: "/candidates", label: "Candidates", icon: "people", badge: "214" },
+      { to: "/candidates", label: "Candidates", icon: "people" },
       { to: "/restaurants", label: "Restaurants", icon: "store", badge: "15" },
     ],
   },
@@ -73,9 +73,24 @@ function NavIcon({ icon }: { icon: NavItem["icon"] }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <nav aria-label="Console" className="flex w-60 shrink-0 flex-col gap-6 overflow-y-auto border-r border-hairline-soft bg-canvas px-3 py-5">
+    <>
+      {/* Backdrop closes the drawer below 1024px (DESIGN.md collapsing strategy) */}
+      {open && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={onClose}
+          className="fixed inset-0 z-30 bg-ink/40 lg:hidden"
+        />
+      )}
+      <nav
+        aria-label="Console"
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 transform flex-col gap-6 overflow-y-auto border-r border-hairline-soft bg-canvas px-3 pb-5 pt-14 transition-transform duration-150 lg:static lg:z-auto lg:w-60 lg:translate-x-0 lg:pt-5 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
       {SECTIONS.map((section) => (
         <div key={section.heading}>
           <p className="px-3 pb-1 text-micro font-semibold uppercase tracking-wide text-steel">
@@ -87,8 +102,9 @@ export function Sidebar() {
                 <NavLink
                   to={item.to}
                   end={item.to === "/"}
+                  onClick={onClose}
                   className={({ isActive }) =>
-                    `flex h-8 items-center gap-2.5 rounded-sm px-3 text-body-sm ${
+                    `flex h-11 items-center gap-2.5 rounded-sm px-3 text-body-sm lg:h-8 ${
                       isActive
                         ? "bg-surface font-medium text-ink"
                         : "text-steel hover:bg-surface hover:text-ink"
@@ -127,11 +143,12 @@ export function Sidebar() {
         </ul>
         <button
           type="button"
-          className="mt-3 h-8 w-full rounded-full border border-hairline text-body-sm-medium text-ink"
+          className="mt-3 flex h-11 w-full items-center justify-center rounded-full border border-hairline text-body-sm-medium text-ink lg:h-8"
         >
           Pause all agents
         </button>
       </div>
     </nav>
+    </>
   );
 }

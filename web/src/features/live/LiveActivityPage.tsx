@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { EventKind, LiveEvent } from "../../api/types";
-import { fetchLiveEventsSeed, fetchLiveFeedMeta } from "../../api/client";
-import { createMockEventStream } from "../../mocks/mockStream";
+import { fetchLiveFeedMeta } from "../../api/client";
+import { useLiveEvents } from "../../api/useLiveEvents";
 
 const KIND_LABELS: Record<EventKind, string> = {
   agent_turn: "agent.turn",
@@ -92,7 +92,7 @@ function EventDetail({ event }: { event: LiveEvent }) {
         </Link>
         <button
           type="button"
-          className="flex h-9 items-center rounded-full border border-hairline px-4 text-body-sm-medium text-ink"
+          className="flex h-11 items-center rounded-full border border-hairline px-4 text-body-sm-medium text-ink lg:h-9"
         >
           View trace
         </button>
@@ -103,45 +103,12 @@ function EventDetail({ event }: { event: LiveEvent }) {
 
 export function LiveActivityPage() {
   const { data: meta } = useQuery({ queryKey: ["live-feed-meta"], queryFn: fetchLiveFeedMeta });
-  const { data: seed } = useQuery({ queryKey: ["live-events-seed"], queryFn: fetchLiveEventsSeed });
 
-  const [events, setEvents] = useState<LiveEvent[]>([]);
-  const [paused, setPaused] = useState(false);
+  const { events, paused, setPaused, connected } = useLiveEvents();
   const [filter, setFilter] = useState<EventKind | "all">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const streamRef = useRef<ReturnType<typeof createMockEventStream> | null>(null);
 
-  useEffect(() => {
-    streamRef.current?.[paused ? "pause" : "resume"]();
-  }, [paused]);
-
-  const seededRef = useRef(false);
-  useEffect(() => {
-    if (seed && !seededRef.current) {
-      seededRef.current = true;
-      setEvents(seed);
-    }
-  }, [seed]);
-
-  useEffect(() => {
-    if (!seed) return;
-    let counter = 0;
-    const stream = createMockEventStream({
-      events: seed,
-      intervalMs: 7500,
-      loop: true,
-      onEvent: (event) => {
-        counter += 1;
-        setEvents((current) => [
-          { ...event, id: `${event.id}-replay-${counter}` },
-          ...current,
-        ]);
-      },
-    });
-    streamRef.current = stream;
-    stream.start();
-    return () => stream.stop();
-  }, [seed]);
+  const statusLabel = !connected ? "Reconnecting" : paused ? "Paused" : "Streaming";
 
   const visible = useMemo(
     () => (filter === "all" ? events : events.filter((event) => event.kind === filter)),
@@ -171,13 +138,13 @@ export function LiveActivityPage() {
           <span className="flex items-center gap-2 rounded-full bg-brand-green-soft px-3 py-1.5 text-body-sm-medium text-ink">
             <span
               aria-hidden
-              className={`inline-block h-1.5 w-1.5 rounded-full bg-brand-green ${paused ? "" : "animate-pulse"}`}
+              className={`inline-block h-1.5 w-1.5 rounded-full bg-brand-green ${paused || !connected ? "" : "animate-pulse"}`}
             />
-            {paused ? "Paused" : "Streaming"} - {events.length} events
+            {statusLabel} - {events.length} events
           </span>
           <button
             type="button"
-            onClick={() => setPaused((value) => !value)}
+            onClick={() => setPaused(!paused)}
             className="flex h-9 items-center rounded-full border border-hairline px-4 text-body-sm-medium text-ink"
           >
             {paused ? "Resume feed" : "Pause feed"}
@@ -208,8 +175,8 @@ export function LiveActivityPage() {
           ))}
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-lg border border-hairline-soft bg-canvas">
-          <div className="grid grid-cols-[80px_110px_130px_1fr_80px] gap-2 border-b border-hairline-soft px-4 py-2 text-micro font-semibold uppercase tracking-wide text-steel">
+        <div className="mt-4 overflow-x-auto rounded-lg border border-hairline-soft bg-canvas">
+          <div className="grid min-w-[620px] grid-cols-[80px_110px_130px_1fr_80px] gap-2 border-b border-hairline-soft px-4 py-2 text-micro font-semibold uppercase tracking-wide text-steel">
             <span>Time</span>
             <span>Actor</span>
             <span>Event</span>
@@ -225,7 +192,7 @@ export function LiveActivityPage() {
                     type="button"
                     onClick={() => setExpandedId(expanded ? null : event.id)}
                     aria-expanded={expanded}
-                    className="grid w-full grid-cols-[80px_110px_130px_1fr_80px] items-center gap-2 px-4 py-2.5 text-left hover:bg-surface"
+                    className="grid w-full min-w-[620px] grid-cols-[80px_110px_130px_1fr_80px] items-center gap-2 px-4 py-2.5 text-left hover:bg-surface"
                   >
                     <span className="font-mono text-micro text-stone">{event.at}</span>
                     <span className="flex items-center gap-1.5 text-body-sm text-charcoal">

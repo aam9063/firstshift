@@ -62,7 +62,8 @@ function Funnel({ funnel }: { funnel: FunnelSummary }) {
 
 function CoverageTable({ rows }: { rows: CoverageRow[] }) {
   return (
-    <table className="w-full text-left">
+    <div className="overflow-x-auto">
+    <table className="w-full min-w-[480px] text-left">
       <thead>
         <tr className="text-micro uppercase tracking-wide text-steel">
           <th className="py-2 font-semibold">Restaurant</th>
@@ -103,6 +104,7 @@ function CoverageTable({ rows }: { rows: CoverageRow[] }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 

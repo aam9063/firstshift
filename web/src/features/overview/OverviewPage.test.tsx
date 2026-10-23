@@ -1,7 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { OverviewPage } from "./OverviewPage";
+import { overviewFixture } from "../../mocks/fixtures";
+
+/* The page talks to the real API client; MSW serves the fixture body at the
+   documented endpoint (fixtures stay test-only). */
+const server = setupServer(
+  http.get("*/api/overview", () => HttpResponse.json(overviewFixture)),
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 function renderPage() {
   const queryClient = new QueryClient({

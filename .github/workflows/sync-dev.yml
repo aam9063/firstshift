@@ -1,0 +1,45 @@
+name: Sync main into dev
+
+# Why this exists: every dev -> main delivery is squashed, so main gains a
+# commit that dev never had. Without a sync back, the next dev -> main pull
+# request conflicts on whichever files moved in both branches. This workflow
+# closes the loop right after main changes, so dev always contains main.
+#
+# `-X ours` is safe here by contract: main only ever receives merges from dev
+# (see AGENTS.md section 8), so dev is a superset of main. If that contract
+# ever changes (a hotfix landing on main directly), switch this to a normal
+# merge and resolve by hand.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-main-into-dev
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge main back into dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Merge origin/main into dev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main dev
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "dev already contains main; nothing to sync."
+            exit 0
+          fi
+          git merge origin/main -X ours --no-edit -m "chore: sync main into dev (automated)"
+          git push origin HEAD:dev
