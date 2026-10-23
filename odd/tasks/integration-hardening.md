@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** make FirstShift production-shaped inside Lumbre's environment: adapters that survive the client systems' real failure modes, contract tests, fault injection, observability and degraded-mode behaviour, plus the integration guide that lists every write.
-- **Status:** in progress
+- **Status:** closed, awaiting review (PR open)
 - **Branch:** feature/integration-hardening, from dev (05ebc18).
 
 ## Specs
@@ -19,10 +19,10 @@ Source of truth: `specs/06-integration-rollout.md` sections 1 and 2, `design/int
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S1,S2 | Fault injection in the mocks and the adapters that handle every listed failure mode, with contract tests | pending |
-| T2 | S4 | Health checks per adapter, degraded-mode gating and holding messages, trace propagation, DLQ replay path | pending |
-| T3 | S3 | docs/integration-guide.md with every write per system | pending |
-| T4 | - | Verify (suite, ruff, mypy), close, PR | pending |
+| T1 | S1,S2 | Fault injection in the mocks and the adapters that handle every listed failure mode, with contract tests | done (39b354c) |
+| T2 | S4 | Health checks per adapter, degraded-mode gating and holding messages, trace propagation, DLQ replay path | done (9dfcbe7) |
+| T3 | S3 | docs/integration-guide.md with every write per system | done (39b354c) |
+| T4 | - | Verify (suite, ruff, mypy), close, PR | done |
 
 ## Constraints
 
@@ -39,3 +39,7 @@ Source of truth: `specs/06-integration-rollout.md` sections 1 and 2, `design/int
 
 - L1 (user, verbatim): "vamos con F12. Y una pregunta, cuando podremos empezar a conectar el backend y el agente al front para que deje de mostrar datos mockeados?"
 - L2: Answer given: the console endpoints from specs/04b §2 are not implemented yet; a follow-up `console-api` feature implements them so the console can switch MSW off and point VITE_API_URL at the backend. F12 proceeds first as asked.
+
+- L3: Evidence T1/T3 (39b354c): 15 fault modes in mocks/faults.py wired into every mock router; ports and adapters for Nómina360 (60/min token bucket, 200-with-error-body, idempotent create, reconcile + ReconciliationTask), ShiftGrid (optimistic re-check, DST-safe), LearnBite (poll fallback), M365 (WhatsApp slot fallback); HireDesk and Twilio hardened (dedupe, typed 409s, 24h window, templates, opt-out, receipts); 24 contract tests (sandbox-swappable) and 20 failure-mode tests, RED first; docs/integration-guide.md lists every write per system.
+- L4: Evidence T2 (9dfcbe7): GET /health/adapters with defensive discovery (unknown never pauses); pure flow->system gating (app/core/degraded.py) with es/pt/en holding catalog, flow.paused audit and escalation event; trace id propagated in the relay (integration.write and dead-letter rows now carry the journey trace); GET /api/outbox?status=failed and POST /api/outbox/{id}/replay (409 on non-failed, both audited); docs/reliability.md with the four alerts, the verbatim SLOs and a documented-not-wired section. The webhook first contact is now gated too (parent applied it after the worker's surfaces ended) with its own test.
+- L5: Verification: 488 tests passed, ruff and mypy clean. Remaining known gaps recorded honestly: ReconciliationTask is a Pydantic model, not a DB row (persisting tasks in the nightly worker is follow-up work); ShiftGrid/LearnBite/TillCloud/M365 auth details are build-time confirmations; the WhatsApp template registration is a client-side setup step.
