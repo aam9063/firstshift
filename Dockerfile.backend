@@ -6,6 +6,9 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
 
 COPY app ./app
+# The console API reads eval reports and the pricing table, so evals ships
+# with the backend runtime.
+COPY evals ./evals
 
 EXPOSE 8000
 
