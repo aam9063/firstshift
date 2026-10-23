@@ -2,8 +2,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { CandidateJourneyPage } from "./CandidateJourneyPage";
+import { candidateFixture } from "../../mocks/fixtures";
+
+/* The page talks to the real API client; MSW serves the fixture body at the
+   documented endpoint (fixtures stay test-only). */
+const server = setupServer(
+  http.get("*/api/candidates/C-0214", () => HttpResponse.json(candidateFixture)),
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 function renderPage() {
   const queryClient = new QueryClient({

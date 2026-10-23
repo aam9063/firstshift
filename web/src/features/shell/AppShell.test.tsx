@@ -1,21 +1,41 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AppShell } from "./AppShell";
+import { overviewFixture } from "../../mocks/fixtures";
+
+/* The shell reads the simulation context from the real API client; MSW
+   serves the fixture body at the documented endpoint (fixtures stay
+   test-only). */
+const server = setupServer(
+  http.get("*/api/overview", () => HttpResponse.json(overviewFixture)),
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 function renderShell() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter initialEntries={["/"]}>
-      <AppShell>view under test</AppShell>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={["/"]}>
+        <AppShell>view under test</AppShell>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
 describe("AppShell", () => {
-  it("shows the simulation banner with the pilot day and the synthetic data note", () => {
+  it("shows the simulation banner with the pilot day and the synthetic data note", async () => {
     renderShell();
-    expect(screen.getByText(/Day 18 of 90/)).toBeInTheDocument();
+    expect(await screen.findByText(/Day 18 of 90/)).toBeInTheDocument();
     expect(
       screen.getByText("All candidates, restaurants and numbers are synthetic"),
     ).toBeInTheDocument();
@@ -48,5 +68,22 @@ describe("AppShell", () => {
     await user.click(screen.getByRole("button", { name: /Viewing as/ }));
     await user.click(screen.getByRole("button", { name: "Ops" }));
     expect(screen.getByText("Viewing as Ops")).toBeInTheDocument();
+  });
+
+  it("opens the navigation drawer from the header toggle below 1024px", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    expect(screen.getByRole("navigation", { name: "Console" })).toHaveClass(
+      "-translate-x-full",
+    );
+    await user.click(screen.getByRole("button", { name: "Open navigation" }));
+    expect(screen.getByRole("navigation", { name: "Console" })).toHaveClass(
+      "translate-x-0",
+    );
+    // The backdrop closes the drawer again
+    await user.click(screen.getByRole("button", { name: "Close navigation" }));
+    expect(screen.getByRole("navigation", { name: "Console" })).toHaveClass(
+      "-translate-x-full",
+    );
   });
 });

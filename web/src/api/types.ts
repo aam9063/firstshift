@@ -140,6 +140,39 @@ export interface LiveFeedResponse {
   agents: { id: string; label: string; version: string }[];
 }
 
+/* Candidate list (GET /api/candidates, app/api/console/schemas.py) */
+
+export type SlaRisk = "ok" | "at_risk" | "breached";
+
+export interface CandidateListItem {
+  id: string;
+  firstName: string;
+  initials: string;
+  state: string;
+  stateLabel: string;
+  restaurant: string;
+  restaurantCode: string;
+  cohort: "pilot" | "control";
+  languages: string[];
+  /** "" until the LLM agent loop has run for this candidate. */
+  agentVersion: string;
+  agentInControl: boolean;
+  slaRisk: SlaRisk;
+  /** ISO timestamp, "" when nothing is recorded yet. */
+  lastActivityAt: string;
+  /** "" when no shift is matched. */
+  matchedShiftLabel: string;
+  phoneMasked: string;
+  elapsedLabel: string;
+}
+
+export interface CandidatesListResponse {
+  items: CandidateListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 /* Candidate journey */
 
 export type JourneyStateId =
