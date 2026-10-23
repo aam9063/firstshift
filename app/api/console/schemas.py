@@ -278,3 +278,61 @@ class ErasureResponse(CamelModel):
     candidate_id: str
     status: str
     requested_at: str
+
+
+class ActivityItem(CamelModel):
+    id: str
+    at: str
+    actor_type: ActorType
+    actor_label: str
+    event_type: str
+    summary: str
+    detail_tag: str | None = None  # short chip label, omitted when none
+
+
+class CoverageRow(CamelModel):
+    id: str
+    restaurant: str
+    cohort: Cohort
+    open_shifts: int
+    covered_pct: float
+    bench: int
+    manager_reply: str  # "" when no manager decision is recorded
+
+
+class OverviewResponse(CamelModel):
+    sim_clock: str  # "" when no simulator run is loaded
+    pilot_day: int  # 0 when no simulator run is loaded
+    pilot_days_total: int  # 0 when no simulator run is loaded
+    kpis: list[KpiCard]
+    funnel: FunnelSummary
+    attention: list[AttentionItem]
+    activity: list[ActivityItem]
+    coverage: list[CoverageRow]
+
+
+class LiveHealth(CamelModel):
+    window_label: str
+    p95_reply_latency: str  # "" when the window has no agent turns
+    schema_reasks: str  # count as text; "" when the window has no agent turns
+    llm_errors: str  # count as text; "" when the window has no agent turns
+    outbox_in_dlq: int
+    cost_per_hire: str  # "" when the window has no agent turns or no hires
+
+
+class GuardrailItem(CamelModel):
+    id: str
+    ok: bool
+    label: str
+
+
+class AgentInfo(CamelModel):
+    id: str
+    label: str
+    version: str
+
+
+class LiveFeedResponse(CamelModel):
+    health: LiveHealth
+    guardrails: list[GuardrailItem]
+    agents: list[AgentInfo]
