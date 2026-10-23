@@ -120,7 +120,7 @@ function RecordRowLine({ row }: { row: RecordRow }) {
 
 function RecordRail({ candidate }: { candidate: CandidateDetail }) {
   return (
-    <aside className="flex w-80 shrink-0 flex-col gap-4">
+    <aside className="flex w-full shrink-0 flex-col gap-4 xl:w-80">
       <section aria-label="Matched shift" className="rounded-lg border border-hairline bg-canvas p-4">
         <p className="text-micro font-semibold uppercase tracking-wide text-steel">Matched shift</p>
         <div className="mt-2 rounded-md border border-brand-green bg-brand-green-soft p-3">
@@ -260,8 +260,8 @@ export function CandidateJourneyPage() {
         )}
       </div>
 
-      <div className="flex gap-6">
-        <div className="w-64 shrink-0 rounded-lg border border-hairline-soft bg-canvas p-4">
+      <div className="flex flex-col gap-6 xl:flex-row">
+        <div className="w-full shrink-0 rounded-lg border border-hairline-soft bg-canvas p-4 xl:w-64">
           <JourneyTimeline steps={candidate.journey} elapsedLabel={candidate.elapsedLabel} />
         </div>
 

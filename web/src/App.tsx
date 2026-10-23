@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./features/shell/AppShell";
 import { CandidateJourneyPage } from "./features/journey/CandidateJourneyPage";
+import { CandidatesPage } from "./features/candidates/CandidatesPage";
 import { LiveActivityPage } from "./features/live/LiveActivityPage";
 import { OverviewPage } from "./features/overview/OverviewPage";
 import { HealthStatus } from "./components/HealthStatus";
@@ -37,7 +38,7 @@ export default function App() {
           <Route path="/live" element={<AppShell><LiveActivityPage /></AppShell>} />
           <Route
             path="/candidates"
-            element={<AppShell><PlaceholderPage title="Candidates" /></AppShell>}
+            element={<AppShell><CandidatesPage /></AppShell>}
           />
           <Route
             path="/candidates/:id"
