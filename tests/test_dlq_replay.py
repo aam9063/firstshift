@@ -39,11 +39,30 @@ def engine() -> Iterator[Engine]:
 
 
 @pytest.fixture()
-def client() -> Iterator[TestClient]:
+def client(engine: Engine) -> Iterator[TestClient]:
+    """The API must talk to the test schema, not the ambient DATABASE_URL:
+    without the override the endpoints hit the real database (which is empty
+    in CI) and the test only passed locally because the dev DB is migrated."""
+    from app.api.deps import get_session
     from app.main import app
 
-    with TestClient(app) as test_client:
-        yield test_client
+    def override_get_session() -> Iterator[Session]:
+        session = Session(engine)
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_session] = override_get_session
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.pop(get_session, None)
 
 
 def _outbox_payload(hiredesk_application_id: str) -> dict[str, object]:
