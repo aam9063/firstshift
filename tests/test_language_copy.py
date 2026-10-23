@@ -55,6 +55,16 @@ EXPECTED_BODIES: dict[str, dict[str, str]] = {
         "bench_reengagement": "Temos uma nova vaga para ti na Lumbre Burger.",
         "bench_offer": "Queres ficar na nossa bolsa de emprego?",
         "rejection": "Obrigado pelo teu interesse: nesta ocasião não continuamos.",
+        "escalation": (
+            "Obrigado pela tua mensagem. Uma pessoa da equipa de contratação "
+            "retoma esta conversação o mais breve possível. A tua candidatura "
+            "continua aberta."
+        ),
+        "document_review": (
+            "Obrigado pelo aviso: como os documentos não são teus, uma pessoa "
+            "da equipa tem de os rever antes de continuar com o registo. "
+            "Escrevemos-te assim que a revisão avançar."
+        ),
     },
     "en": {
         "offer": "Job offer from Lumbre Burger: reply YES to accept.",
@@ -64,6 +74,17 @@ EXPECTED_BODIES: dict[str, dict[str, str]] = {
         "bench_reengagement": "We have a new vacancy for you at Lumbre Burger.",
         "bench_offer": "Would you like to stay in our talent pool?",
         "rejection": "Thank you for your interest: this time we will not move forward.",
+        "escalation": (
+            "Thank you for your message. A person from the hiring team will "
+            "pick up this conversation as soon as possible. Your application "
+            "remains open."
+        ),
+        "document_review": (
+            "Thank you for letting us know: because the documents are not "
+            "yours, a person on the team has to review them before the "
+            "registration can continue. We will write as soon as the review "
+            "moves forward."
+        ),
     },
 }
 

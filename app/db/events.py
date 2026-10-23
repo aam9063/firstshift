@@ -29,6 +29,10 @@ class EventType(StrEnum):
     AGENT_TURN = "agent.turn"
     TOOL_CALL = "tool.call"
     UNMATCHED_INBOUND = "unmatched.inbound"
+    # G5 (F11 T4/S4): a deterministic inbound classification (abusive or
+    # distressed candidate message) escalates to a human. The Event.type
+    # column is a plain String, so no migration is needed.
+    ESCALATION_CREATED = "escalation.created"
 
 
 class EventEnvelope(BaseModel):

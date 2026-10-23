@@ -82,6 +82,20 @@ _SCRIPTED_BODIES = {
     "bench_reengagement": "Tenemos una nueva vacante para ti en Lumbre Burger.",
     "bench_offer": "¿Quieres quedar en nuestra bolsa de empleo?",
     "rejection": "Gracias por tu interes: en esta ocasion no seguimos.",
+    # G5 (F11 T4/S4): the canned kind escalation reply. Both the abusive and
+    # the distressed classification send this one catalog template; a human
+    # picks the conversation up from here.
+    "escalation": (
+        "Gracias por tu mensaje. Una persona del equipo de contratacion "
+        "retoma esta conversacion lo antes posible. Tu solicitud sigue abierta."
+    ),
+    # Third-party document hold (F11 T4/S4): the canned notification that the
+    # submitted documents need human review before the tracker moves.
+    "document_review": (
+        "Gracias por el aviso: como los documentos no son tuyos, una persona "
+        "del equipo tiene que revisarlos antes de seguir con el alta. Te "
+        "escribimos en cuanto la revision avance."
+    ),
 }
 
 
@@ -107,6 +121,8 @@ _CANDIDATE_BODIES: dict[str, dict[str, str]] = {
         "bench_reengagement": _SCRIPTED_BODIES["bench_reengagement"],
         "bench_offer": _SCRIPTED_BODIES["bench_offer"],
         "rejection": _SCRIPTED_BODIES["rejection"],
+        "escalation": _SCRIPTED_BODIES["escalation"],
+        "document_review": _SCRIPTED_BODIES["document_review"],
     },
     "pt": {
         "offer": "Oferta de emprego da Lumbre Burger: responde SIM para aceitar.",
@@ -116,6 +132,16 @@ _CANDIDATE_BODIES: dict[str, dict[str, str]] = {
         "bench_reengagement": "Temos uma nova vaga para ti na Lumbre Burger.",
         "bench_offer": "Queres ficar na nossa bolsa de emprego?",
         "rejection": "Obrigado pelo teu interesse: nesta ocasião não continuamos.",
+        "escalation": (
+            "Obrigado pela tua mensagem. Uma pessoa da equipa de contratação "
+            "retoma esta conversação o mais breve possível. A tua candidatura "
+            "continua aberta."
+        ),
+        "document_review": (
+            "Obrigado pelo aviso: como os documentos não são teus, uma pessoa "
+            "da equipa tem de os rever antes de continuar com o registo. "
+            "Escrevemos-te assim que a revisão avançar."
+        ),
     },
     "en": {
         "offer": "Job offer from Lumbre Burger: reply YES to accept.",
@@ -125,6 +151,17 @@ _CANDIDATE_BODIES: dict[str, dict[str, str]] = {
         "bench_reengagement": "We have a new vacancy for you at Lumbre Burger.",
         "bench_offer": "Would you like to stay in our talent pool?",
         "rejection": "Thank you for your interest: this time we will not move forward.",
+        "escalation": (
+            "Thank you for your message. A person from the hiring team will "
+            "pick up this conversation as soon as possible. Your application "
+            "remains open."
+        ),
+        "document_review": (
+            "Thank you for letting us know: because the documents are not "
+            "yours, a person on the team has to review them before the "
+            "registration can continue. We will write as soon as the review "
+            "moves forward."
+        ),
     },
 }
 
@@ -164,6 +201,10 @@ CANDIDATE_FACING_TEMPLATES = frozenset(
         "interview_reminder",
         "bench_offer",
         "bench_reengagement",
+        # G5 canned escalation reply and the third-party document review
+        # notification (F11 T4/S4): both are candidate-facing catalog copy.
+        "escalation",
+        "document_review",
     }
 )
 

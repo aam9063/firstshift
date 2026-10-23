@@ -230,6 +230,10 @@ def test_whitelist_covers_every_candidate_facing_template() -> None:
         "interview_reminder",
         "bench_offer",
         "bench_reengagement",
+        # G5 canned escalation and the third-party document review notice
+        # (F11 T4/S4) are candidate-facing catalog copy too.
+        "escalation",
+        "document_review",
     }
     assert candidate_templates == set(CANDIDATE_FACING_TEMPLATES)
 
