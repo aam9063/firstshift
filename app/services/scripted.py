@@ -27,6 +27,7 @@ this file only persists what dispatch returns and raises on any rejection so
 a scripted flow fails loudly instead of silently stalling.
 """
 
+import logging
 from dataclasses import dataclass, fields, replace
 from datetime import UTC, datetime
 from typing import Any
@@ -81,7 +82,152 @@ _SCRIPTED_BODIES = {
     "bench_reengagement": "Tenemos una nueva vacante para ti en Lumbre Burger.",
     "bench_offer": "¿Quieres quedar en nuestra bolsa de empleo?",
     "rejection": "Gracias por tu interes: en esta ocasion no seguimos.",
+    # G5 (F11 T4/S4): the canned kind escalation reply. Both the abusive and
+    # the distressed classification send this one catalog template; a human
+    # picks the conversation up from here.
+    "escalation": (
+        "Gracias por tu mensaje. Una persona del equipo de contratacion "
+        "retoma esta conversacion lo antes posible. Tu solicitud sigue abierta."
+    ),
+    # Third-party document hold (F11 T4/S4): the canned notification that the
+    # submitted documents need human review before the tracker moves.
+    "document_review": (
+        "Gracias por el aviso: como los documentos no son tuyos, una persona "
+        "del equipo tiene que revisarlos antes de seguir con el alta. Te "
+        "escribimos en cuanto la revision avance."
+    ),
 }
+
+
+# F10 iteration-2 language-aware candidate-facing copy (specs/05 section 4,
+# one measured change; C-O4 language matches candidate).
+#
+# Per-language variants of the seven CANDIDATE_FACING_TEMPLATES. The Spanish
+# entries reuse the Spanish map above (single source of the original copy);
+# Spanish is also the documented last-resort fallback, used only when the
+# candidate's language is genuinely unknown or unsupported. The variants keep
+# the meaning of the Spanish originals, stay WhatsApp-sized and add no
+# promises. Internal-recipient bodies (decision_request and the SIM_BODIES
+# templates) are not candidate-facing and are not translated.
+CANDIDATE_BODY_LANGUAGES = ("es", "pt", "en")
+DEFAULT_CANDIDATE_LANGUAGE = "es"
+
+_CANDIDATE_BODIES: dict[str, dict[str, str]] = {
+    "es": {
+        "offer": _SCRIPTED_BODIES["offer"],
+        "nudge_1": _SCRIPTED_BODIES["nudge_1"],
+        "nudge_2": _SCRIPTED_BODIES["nudge_2"],
+        "interview_reminder": _SCRIPTED_BODIES["interview_reminder"],
+        "bench_reengagement": _SCRIPTED_BODIES["bench_reengagement"],
+        "bench_offer": _SCRIPTED_BODIES["bench_offer"],
+        "rejection": _SCRIPTED_BODIES["rejection"],
+        "escalation": _SCRIPTED_BODIES["escalation"],
+        "document_review": _SCRIPTED_BODIES["document_review"],
+    },
+    "pt": {
+        "offer": "Oferta de emprego da Lumbre Burger: responde SIM para aceitar.",
+        "nudge_1": "Continuamos com a tua candidatura? Responde para continuar.",
+        "nudge_2": "A tua candidatura continua aberta: responde para continuar.",
+        "interview_reminder": "Lembrete da tua entrevista na Lumbre Burger.",
+        "bench_reengagement": "Temos uma nova vaga para ti na Lumbre Burger.",
+        "bench_offer": "Queres ficar na nossa bolsa de emprego?",
+        "rejection": "Obrigado pelo teu interesse: nesta ocasião não continuamos.",
+        "escalation": (
+            "Obrigado pela tua mensagem. Uma pessoa da equipa de contratação "
+            "retoma esta conversação o mais breve possível. A tua candidatura "
+            "continua aberta."
+        ),
+        "document_review": (
+            "Obrigado pelo aviso: como os documentos não são teus, uma pessoa "
+            "da equipa tem de os rever antes de continuar com o registo. "
+            "Escrevemos-te assim que a revisão avançar."
+        ),
+    },
+    "en": {
+        "offer": "Job offer from Lumbre Burger: reply YES to accept.",
+        "nudge_1": "Shall we continue with your application? Reply to keep going.",
+        "nudge_2": "Your application is still open: reply to keep going.",
+        "interview_reminder": "Reminder of your interview at Lumbre Burger.",
+        "bench_reengagement": "We have a new vacancy for you at Lumbre Burger.",
+        "bench_offer": "Would you like to stay in our talent pool?",
+        "rejection": "Thank you for your interest: this time we will not move forward.",
+        "escalation": (
+            "Thank you for your message. A person from the hiring team will "
+            "pick up this conversation as soon as possible. Your application "
+            "remains open."
+        ),
+        "document_review": (
+            "Thank you for letting us know: because the documents are not "
+            "yours, a person on the team has to review them before the "
+            "registration can continue. We will write as soon as the review "
+            "moves forward."
+        ),
+    },
+}
+
+
+def candidate_language(preferred_language: str | None) -> str:
+    """The language candidate-facing copy is written in for this candidate:
+    the stated preferred language when supported, Spanish as the documented
+    last resort when it is genuinely unknown or unsupported."""
+    if preferred_language is not None and preferred_language in _CANDIDATE_BODIES:
+        return preferred_language
+    return DEFAULT_CANDIDATE_LANGUAGE
+
+
+def candidate_body(template: str, preferred_language: str | None) -> str | None:
+    """Candidate-facing copy for one template in the candidate's language."""
+    return _CANDIDATE_BODIES[candidate_language(preferred_language)].get(template)
+
+
+# F09 iteration-1 channel-body guard (specs/05 section 4, one measured change).
+#
+# CANDIDATE_FACING_TEMPLATES is the explicit whitelist of outbox templates that
+# have real candidate-facing human copy. INTERNAL_RECIPIENT_KINDS are the
+# outbox kinds whose recipients are internal roles, never the candidate, and
+# INTERNAL_RECIPIENT_REFS are the simulated internal recipient refs the two
+# dispatch paths route them to. Body resolution order:
+#   1. configured template copy,
+#   2. internal-recipient safe body (internal recipients only),
+#   3. never a candidate-facing fallback identifier: an unknown kind addressed
+#      to a candidate is not delivered as a message; it is recorded (warning
+#      log, rule 7) and no pending outbound is returned.
+CANDIDATE_FACING_TEMPLATES = frozenset(
+    {
+        "offer",
+        "rejection",
+        "nudge_1",
+        "nudge_2",
+        "interview_reminder",
+        "bench_offer",
+        "bench_reengagement",
+        # G5 canned escalation reply and the third-party document review
+        # notification (F11 T4/S4): both are candidate-facing catalog copy.
+        "escalation",
+        "document_review",
+    }
+)
+
+INTERNAL_RECIPIENT_KINDS = frozenset(
+    {"trainer.notify", "bench.reserve_backup", "backup.activate"}
+)
+
+INTERNAL_RECIPIENT_REFS = frozenset(
+    {"manager-sim", "hrbp-sim", "trainer-sim", "bench-backup-sim"}
+)
+
+# Safe body for an internal recipient when no configured copy exists: a
+# human-readable notice, never the raw outbox kind.
+INTERNAL_FALLBACK_BODY = (
+    "Aviso interno del sistema de contratacion: revisa el panel de operaciones."
+)
+
+LOGGER = logging.getLogger(__name__)
+
+
+def is_internal_recipient(kind: str, recipient_ref: str) -> bool:
+    """True when the message goes to an internal role, never to a candidate."""
+    return kind in INTERNAL_RECIPIENT_KINDS or recipient_ref in INTERNAL_RECIPIENT_REFS
 
 
 class ScriptedDispatchError(RuntimeError):
@@ -94,6 +240,10 @@ class _PendingOutbound:
 
     message: OutboundMessage
     template: str
+    # Language the body was written in; None for internal-recipient copy,
+    # which is not candidate-facing (iteration-2 instrumentation: the tag
+    # feeds the outbound_language_matches guardrail).
+    language: str | None = None
 
 
 class ScriptedJourney:
@@ -242,6 +392,11 @@ class ScriptedJourney:
                 outbound = self._whatsapp_outbound(
                     kind, core_message.payload, candidate
                 )
+                if outbound is None:
+                    # The body guard suppressed a candidate-facing send
+                    # without configured copy; the warning log keeps the
+                    # suppression observable (rule 7).
+                    continue
                 outbounds.setdefault(outbound.template, outbound)
                 simulator_channel.send_message(outbound.message)
                 session.add(
@@ -255,6 +410,11 @@ class ScriptedJourney:
                             "quick_replies": outbound.message.quick_replies,
                             "correlation_id": outbound.message.correlation_id,
                             "template": outbound.template,
+                            **(
+                                {"language": outbound.language}
+                                if outbound.language is not None
+                                else {}
+                            ),
                         },
                         idempotency_key=(
                             f"fs/whatsapp/send/{restaurant_code}/{application.id}/{row_id}"
@@ -319,6 +479,11 @@ class ScriptedJourney:
                             "recipient_ref": matched.message.recipient_ref,
                             "body": matched.message.body,
                             "correlation_id": matched.message.correlation_id,
+                            **(
+                                {"language": matched.language}
+                                if matched.language is not None
+                                else {}
+                            ),
                         }
                     )
             append_event(
@@ -333,16 +498,38 @@ class ScriptedJourney:
 
     def _whatsapp_outbound(
         self, kind: str, core_payload: dict[str, object], candidate: Candidate
-    ) -> _PendingOutbound:
+    ) -> _PendingOutbound | None:
         template = str(core_payload.get("template") or kind)
         recipient_ref = _RECIPIENT_BY_KIND.get(kind)
         if recipient_ref is None:
             recipient_ref = (
                 "manager-sim" if core_payload.get("to") == "manager" else candidate.phone
             )
-        body = _SCRIPTED_BODIES.get(
-            template, f"Lumbre Burger: {template.replace('_', ' ')}"
-        )
+        body: str | None
+        language: str | None = None
+        if template in CANDIDATE_FACING_TEMPLATES:
+            # Candidate-facing copy follows the candidate's stated preferred
+            # language (C-O4, iteration-2); the resolved language is carried
+            # on the outbound so the language guardrail can verify it.
+            body = candidate_body(template, candidate.preferred_language)
+            language = candidate_language(candidate.preferred_language)
+        else:
+            body = _SCRIPTED_BODIES.get(template)
+        if body is None:
+            if is_internal_recipient(kind, recipient_ref):
+                body = INTERNAL_FALLBACK_BODY
+            else:
+                # Never a candidate-facing fallback identifier (F09 T2): the
+                # kind stays observable through the warning log only.
+                LOGGER.warning(
+                    "suppressed candidate-facing outbound without configured copy: "
+                    "kind=%s template=%s candidate=%s trace=%s",
+                    kind,
+                    template,
+                    candidate.id,
+                    self._trace_id,
+                )
+                return None
         return _PendingOutbound(
             message=OutboundMessage(
                 recipient_ref=recipient_ref,
@@ -351,6 +538,7 @@ class ScriptedJourney:
                 quick_replies=["Sí", "No"] if template == "first_message" else [],
             ),
             template=template,
+            language=language,
         )
 
 

@@ -37,13 +37,17 @@ from app.core.state_machine import (
 from app.db.events import EventEnvelope, EventType, append_event
 from app.db.models import Application, AuditEvent, Candidate, OutboxMessage, Restaurant
 from app.ports.messaging import OutboundMessage
+from app.services.scripted import candidate_language
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 NOTICE_VERSION = "v1"
 
 # Scripted first contact (design row 2): carries the AI disclosure and the
-# notice version, in the candidate's language (Spanish by default).
+# notice version. The body is the Spanish intake default: it is sent before
+# the candidate has stated any preference in-channel, so C-O4's temporal rule
+# cannot be violated; every composition after the candidate's first inbound
+# follows the candidate's stated preferred language.
 FIRST_MESSAGE_TEMPLATE = (
     "Hola {first_name}: soy el asistente virtual de contratación de Lumbre Burger "
     "para {restaurant_name}. Soy una IA y trato tus datos según el aviso de "
@@ -70,6 +74,12 @@ class HireDeskNewApplication(BaseModel):
     first_name: str | None = None
     phone: str | None = None
     source: str = "qr"
+    # The application's stated language, when HireDesk knows it. None (the
+    # real webhook today) keeps the Spanish intake default. It is the
+    # candidate's preferred language from creation, so every later
+    # composition (timer nudges, canned guard replies) uses it without
+    # waiting for save_language_tag.
+    language: str | None = None
 
 
 @router.post("/hiredesk", status_code=201, response_model=None)
@@ -101,12 +111,17 @@ def hiredesk_webhook(
     now = datetime.now(UTC)
     applied_at = payload.applied_at or now
 
+    # The language source of truth: the stated intake language when supported,
+    # the Spanish intake default when nothing states otherwise (candidate_language
+    # normalizes unsupported values to the documented last resort).
+    language = candidate_language(payload.language)
+
     candidate = Candidate(
         id=uuid4(),
         brand_id=restaurant.brand_id,
         first_name=payload.first_name or "Candidato",
         phone=payload.phone or "+34600000000",
-        preferred_language="es",
+        preferred_language=language,
         hiredesk_candidate_id=payload.candidate_id,
         state=State.NEW.value,
         source=payload.source,
@@ -151,7 +166,7 @@ def hiredesk_webhook(
         "intake_processed",
         Actor(ActorKind.SYSTEM, "firstshift-webhook"),
         now=now,
-        payload={"notice_version": NOTICE_VERSION, "ai_disclosed": True, "language": "es"},
+        payload={"notice_version": NOTICE_VERSION, "ai_disclosed": True, "language": language},
     )
     if not result.transitioned or result.to_state is None:
         # Unreachable while the guard payload is fixed above; fail loudly
