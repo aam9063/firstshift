@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.simulator import channel as simulator_channel
 from app.api.deps import get_session
+from app.core.degraded import known_statuses, pause_for_event
 from app.core.state_machine import (
     Actor,
     ActorKind,
@@ -80,6 +81,82 @@ class HireDeskNewApplication(BaseModel):
     # composition (timer nudges, canned guard replies) uses it without
     # waiting for save_language_tag.
     language: str | None = None
+
+
+def _pause_first_contact(
+    session: Session,
+    *,
+    application: Application,
+    candidate: Candidate,
+    flow: str,
+    system: str,
+    trace_id: str,
+    now: datetime,
+    language: str,
+) -> None:
+    """Persist one paused first contact (F12 T2, S4): the audit record, the
+    message.out event and the holding message from the versioned catalog as a
+    confirmed outbox row. The application state is not touched."""
+    from app.services.scripted import candidate_body, candidate_language
+
+    tag = candidate_language(language)
+    body = candidate_body("holding", tag)
+    if body is None:  # pragma: no cover - catalog is versioned and complete
+        raise HTTPException(status_code=500, detail="no holding copy configured")
+    outbox_id = uuid4()
+    session.add(
+        OutboxMessage(
+            id=outbox_id,
+            port="whatsapp",
+            operation="send",
+            payload={
+                "recipient_ref": candidate.phone,
+                "body": body,
+                "quick_replies": [],
+                "correlation_id": trace_id,
+                "template": "holding",
+                "language": tag,
+            },
+            idempotency_key=(
+                f"fs/whatsapp/send/{candidate.id}/{application.id}/{outbox_id}"
+            ),
+            status="api_confirmed",
+            related_entity_id=candidate.id,
+        )
+    )
+    session.add(
+        AuditEvent(
+            id=uuid4(),
+            occurred_at=now,
+            actor_type="system",
+            actor_id="firstshift.degraded_mode",
+            application_id=application.id,
+            candidate_id=candidate.id,
+            event_type="flow.paused",
+            payload={
+                "flow": flow,
+                "required_system": system,
+                "reason": f"required client system '{system}' is degraded; flow '{flow}' paused",
+                "template": "holding",
+            },
+        )
+    )
+    append_event(
+        session,
+        EventEnvelope(
+            type=EventType.MESSAGE_OUT,
+            candidate_id=candidate.id,
+            trace_id=trace_id,
+            occurred_at=now,
+            payload={
+                "template": "holding",
+                "recipient_ref": candidate.phone,
+                "body": body,
+                "language": tag,
+                "correlation_id": trace_id,
+            },
+        ),
+    )
 
 
 @router.post("/hiredesk", status_code=201, response_model=None)
@@ -160,6 +237,30 @@ def hiredesk_webhook(
             },
         ),
     )
+
+    # S4 degraded mode: when the channel is degraded, first contact pauses.
+    # The candidate is created (the application row is the client's record),
+    # the state does not advance, and the candidate receives the holding
+    # message instead of silence.
+    pause = pause_for_event("intake_processed", known_statuses())
+    if pause is not None:
+        flow, system = pause
+        _pause_first_contact(
+            session,
+            application=application,
+            candidate=candidate,
+            flow=flow,
+            system=system,
+            trace_id=trace_id,
+            now=now,
+            language=language,
+        )
+        return {
+            "status": "paused",
+            "candidate_id": str(candidate.id),
+            "application_id": str(application.id),
+            "paused_by": system,
+        }
 
     result = StateMachine().dispatch(
         CoreApplication(application_id=str(application.id), state=State.NEW),
