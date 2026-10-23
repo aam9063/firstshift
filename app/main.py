@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
+from app.api.console import router as console_router
 from app.api.events_stream import router as events_stream_router
 from app.api.health import router as health_router
 from app.api.outbox import router as outbox_router
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(simulator_router)
     app.include_router(sim_router)
     app.include_router(events_stream_router)
+    app.include_router(console_router)
     app.include_router(health_router)
     app.include_router(outbox_router)
 
