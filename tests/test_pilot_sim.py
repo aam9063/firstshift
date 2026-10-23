@@ -32,6 +32,7 @@ from evals.pilot import (
     CONTROL_RESTAURANT_IDS,
     PILOT_RESTAURANT_IDS,
     ControlRates,
+    _decisions,
     assign_personas,
     baseline_violations,
     build_arrival_schedule,
@@ -260,3 +261,19 @@ def _section_bodies(markdown: str) -> dict[str, str]:
         end = markdown.index(heads[index + 1]) if index + 1 < len(heads) else len(markdown)
         bodies[head] = markdown[start:end]
     return bodies
+
+
+def test_decisions_evidence_uses_the_runs_day_count() -> None:
+    """The evidence strings must name the run length, not a hardcoded 30:
+    the day-90 readout carried 'in 30 simulated days' before this fix."""
+    modes = [{"mode": "volunteered protected data without a recorded refusal", "count": 4}]
+    escalations = [
+        {"event_type": "manager_decision_escalate", "count": 7},
+        {"event_type": "protected_data_refused", "count": 11},
+    ]
+
+    decisions = _decisions(modes, escalations, 90)
+
+    evidence = " ".join(str(decision["evidence"]) for decision in decisions)
+    assert "90 simulated days" in evidence
+    assert "30 simulated days" not in evidence

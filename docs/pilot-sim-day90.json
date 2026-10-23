@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "days": 90,
+    "seed": 42,
+    "label": "day90",
+    "generated_at": "2026-10-23T17:41:42+00:00",
+    "window_start": "2025-06-02",
+    "window_end": "2025-08-30",
+    "pipeline": "real (evals.run.drive_conversation: HireDesk webhook, sim runner, timers, state machine, scripted offline model)"
+  },
+  "arrivals": {
+    "pilot": 2279,
+    "control": 558,
+    "pilot_per_week": [
+      131,
+      130,
+      165,
+      163,
+      171,
+      178,
+      175,
+      168,
+      207,
+      217,
+      187,
+      235,
+      152
+    ],
+    "control_per_week": [
+      27,
+      43,
+      47,
+      35,
+      35,
+      46,
+      37,
+      44,
+      48,
+      51,
+      49,
+      49,
+      47
+    ],
+    "base_per_restaurant_day": 1.5,
+    "weekend_multiplier": 1.6,
+    "summer_ramp_end": 1.4
+  },
+  "baseline": {
+    "contact_rate": 0.59,
+    "days_to_contact": 3.9,
+    "screen_rate": 0.75,
+    "days_to_screen": 2.0,
+    "schedule_rate": 0.7,
+    "days_to_interview": 4.3,
+    "attend_rate": 0.62,
+    "days_to_attend": 5.0,
+    "offer_rate": 0.6,
+    "days_to_offer": 3.1,
+    "docs_rate": 0.849,
+    "days_to_docs": 2.4,
+    "rota_rate": 0.9,
+    "days_to_rota": 5.1,
+    "day1_rate": 0.821,
+    "days_to_day1": 1.5
+  },
+  "pilot": {
+    "arrivals": 2279,
+    "contact_rate": 1.0,
+    "median_first_contact_minutes": 0.0,
+    "interview_show_rate": 1.0,
+    "day1_show_rate": 0.7552413456850317,
+    "hires": 2051,
+    "worked_first_shifts": 1549,
+    "ttfps_days_median": 6.33,
+    "cost_per_hire_usd": 0.002918,
+    "total_cost_usd": 5.985664,
+    "task_success_rate": 1.0,
+    "final_states": {
+      "benched": 228,
+      "first_shift_worked": 1549,
+      "no_show": 502
+    }
+  },
+  "control": {
+    "model": "statistical model of the as-is process sampled from discovery/funnel-baseline.md (seeded, not a run of the real code)",
+    "arrivals": 558,
+    "contact_rate": 0.5932,
+    "median_days_to_contact": 3.91,
+    "interview_show_rate": 0.6205,
+    "day1_show_rate": 0.8235,
+    "hires": 42,
+    "median_days_application_to_first_shift": 27.67,
+    "cost_per_hire_eur": 420,
+    "baseline_violations": []
+  },
+  "deterministic_checks": {
+    "failing": 0,
+    "checked": 2279
+  },
+  "failure_modes": [
+    {
+      "mode": "day-1 no-show",
+      "count": 502,
+      "detail": "hires whose first shift was scheduled but never worked (hidden reliability below the confirm threshold); the pipeline booked and prepared them and still lost the day"
+    },
+    {
+      "mode": "went silent and were benched",
+      "count": 228,
+      "detail": "candidates who stopped replying and hit the graceful endings (48 h bench timer or the no-reply policy); behaviours: stops_replying x228"
+    }
+  ],
+  "escalations": [
+    {
+      "event_type": "protected_data_refused",
+      "count": 1368,
+      "detail": "Candidate volunteered protected data; the agent refused to store it (guardrail G3) and a human may need to follow up"
+    },
+    {
+      "event_type": "manager_decision_escalate",
+      "count": 228,
+      "detail": "Manager decision SLA breached: the decision reminder and escalation timer fired and a human must decide"
+    }
+  ],
+  "fairness": [
+    {
+      "dimension": "language",
+      "group": "en",
+      "n": 570,
+      "selected": 505,
+      "rate": 0.8859649122807017,
+      "ratio": 0.973,
+      "flagged": false
+    },
+    {
+      "dimension": "language",
+      "group": "es",
+      "n": 570,
+      "selected": 519,
+      "rate": 0.9105263157894737,
+      "ratio": 1.0,
+      "flagged": false
+    },
+    {
+      "dimension": "language",
+      "group": "mixed",
+      "n": 569,
+      "selected": 517,
+      "rate": 0.9086115992970123,
+      "ratio": 0.9979,
+      "flagged": false
+    },
+    {
+      "dimension": "language",
+      "group": "pt",
+      "n": 570,
+      "selected": 510,
+      "rate": 0.8947368421052632,
+      "ratio": 0.9827,
+      "flagged": false
+    },
+    {
+      "dimension": "nationality_group",
+      "group": "anglophone",
+      "n": 570,
+      "selected": 505,
+      "rate": 0.8859649122807017,
+      "ratio": 0.973,
+      "flagged": false
+    },
+    {
+      "dimension": "nationality_group",
+      "group": "hispanic",
+      "n": 570,
+      "selected": 519,
+      "rate": 0.9105263157894737,
+      "ratio": 1.0,
+      "flagged": false
+    },
+    {
+      "dimension": "nationality_group",
+      "group": "lusophone",
+      "n": 570,
+      "selected": 510,
+      "rate": 0.8947368421052632,
+      "ratio": 0.9827,
+      "flagged": false
+    },
+    {
+      "dimension": "nationality_group",
+      "group": "mixed",
+      "n": 569,
+      "selected": 517,
+      "rate": 0.9086115992970123,
+      "ratio": 0.9979,
+      "flagged": false
+    },
+    {
+      "dimension": "age_band",
+      "group": "18-24",
+      "n": 456,
+      "selected": 410,
+      "rate": 0.8991228070175439,
+      "ratio": 0.9928,
+      "flagged": false
+    },
+    {
+      "dimension": "age_band",
+      "group": "25-34",
+      "n": 912,
+      "selected": 816,
+      "rate": 0.8947368421052632,
+      "ratio": 0.988,
+      "flagged": false
+    },
+    {
+      "dimension": "age_band",
+      "group": "35-44",
+      "n": 911,
+      "selected": 825,
+      "rate": 0.9055982436882547,
+      "ratio": 1.0,
+      "flagged": false
+    }
+  ],
+  "decisions": [
+    {
+      "for": "Marta",
+      "decision": "staff the human decision queue before launch: the agent escalates hiring decisions on SLA breach and a human must answer inside restaurant opening hours",
+      "evidence": "228 decision SLA breaches fired in 30 simulated days"
+    },
+    {
+      "for": "Marta (with the DPO)",
+      "decision": "confirm the refused-data wording the DPO signed off in the DPIA: candidates volunteer protected information unprompted and the agent declines to store it every time",
+      "evidence": "1368 refusals in 30 simulated days"
+    },
+    {
+      "for": "Raul",
+      "decision": "approve a day-1 confirmation policy: a WhatsApp confirmation the day before the first shift plus a same-morning fallback, and decide who calls the hires that still go quiet",
+      "evidence": "502 simulated hires were scheduled, prepared and still did not show up on day 1"
+    },
+    {
+      "for": "Marta",
+      "decision": "approve the nudge cadence and the bench reuse rule: silence is the normal case, not the exception, and the bench only has value if managers actually call it",
+      "evidence": "228 candidates went silent mid-process and were benched by the timers"
+    }
+  ]
+}
