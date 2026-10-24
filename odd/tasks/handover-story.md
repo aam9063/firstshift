@@ -3,7 +3,7 @@
 ## Header
 
 - **Objective:** leave the client (and a future engineer) able to run and extend FirstShift without the author, and turn the project into a clear, honest story for an FDE interview.
-- **Status:** in progress
+- **Status:** closed, awaiting review (PR open); the narrative bridge stays a marked placeholder pending the author's real-experience details
 - **Branch:** feature/handover-story, from dev (7982a42).
 
 ## Specs
@@ -21,11 +21,11 @@ Source of truth: `specs/07-handover-and-story.md` sections 1 to 5.
 
 | ID | Spec | Task | Status |
 |---|---|---|---|
-| T1 | S1 | handover.md | pending |
-| T2 | S2 | case-study.md | pending |
-| T3 | S3 | demo-video-notes.md | pending |
-| T4 | S4,S5 | interview-narrative.md, with the bridge section marked pending until the author answers | pending |
-| T5 | S6 | README results, what-is-stubbed and links | pending |
+| T1 | S1 | handover.md | done |
+| T2 | S2 | case-study.md | done |
+| T3 | S3 | demo-video-notes.md | done |
+| T4 | S4,S5 | interview-narrative.md, with the bridge section marked pending until the author answers | done |
+| T5 | S6 | README results, what-is-stubbed and links | done |
 
 ## Constraints
 
@@ -38,3 +38,6 @@ Source of truth: `specs/07-handover-and-story.md` sections 1 to 5.
 - L1 (user, verbatim): "todo en dev. continúa"
 - L2: dev at 7982a42 (the automated main->dev sync), which proves the sync workflow is live.
 - L3: The author's real-experience details for the bridge are requested in the session; the document ships with that section explicitly pending rather than invented.
+
+- L4: Evidence: handover.md 232 lines with the 16-row exists/stubbed/simulated table, ten verified commands (including the two-step calibration emit/score) and nine ranked risks; case-study.md 122 lines (~890 prose words) with the architecture diagram and the verbatim iteration-3 excerpt; demo-video-notes.md 55 lines (seven shots on the real routes, simulation-labelled final frame, notes that demo-script.md does not exist); interview-narrative.md 144 lines (30-second, 2-minute STAR, 12 Q&A, the bridge as an explicit placeholder, public facts only); README with Results labelled simulated, What is stubbed and a documentation table. 0 em dash across the five files.
+- L5: Draft defects fixed during verification: /compliance was described as a placeholder (it is a full DPO view), the calibration command did not match the CLI (score requires --worksheet), a wrong template count, and lint missing from the console command. Left untouched (outside surfaces): a stale comment in web/src/App.tsx making the same placeholder claim.
