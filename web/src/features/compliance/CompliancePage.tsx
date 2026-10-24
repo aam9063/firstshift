@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ApiError, createErasureRequest, fetchAudit } from "../../api/client";
 import type { AuditRow, ErasureResponse } from "../../api/types";
+import { formatDateTime } from "../../lib/dates";
 
 /* Compliance (specs/04b-console.md section 3.8, odd/tasks/console-views.md
    T4/S4): audit log search, consent records grouped by notice version,
@@ -93,7 +94,7 @@ function AuditSearch() {
               <tbody>
                 {data.items.map((row: AuditRow) => (
                   <tr key={row.id} className="border-b border-hairline-soft last:border-b-0">
-                    <td className="px-4 py-2 font-mono text-micro text-steel">{row.at}</td>
+                    <td className="px-4 py-2 font-mono text-micro text-steel">{formatDateTime(row.at)}</td>
                     <td className="px-4 py-2 text-caption text-charcoal">
                       {row.actorLabel}
                       <span className="ml-1 font-mono text-micro text-stone">({row.actorType})</span>
@@ -240,7 +241,7 @@ function ErasureRequests() {
           <p className="text-body-sm-medium text-ink">Erasure request recorded</p>
           <p className="mt-1 font-mono text-micro text-charcoal">
             {recorded.id} · candidate {recorded.candidateId} · status {recorded.status} ·{" "}
-            {recorded.requestedAt}
+            {formatDateTime(recorded.requestedAt)}
           </p>
         </div>
       )}

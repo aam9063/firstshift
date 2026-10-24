@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ApiError, fetchEvalReport, fetchEvalVersions } from "../../api/client";
 import type { EvalConversation, EvalReport, EvalSummaryRow } from "../../api/types";
+import { formatDateTime } from "../../lib/dates";
 
 /* Evals (specs/04b-console.md section 3.7, odd/tasks/console-views.md T3/S3):
    the version list, a comparison of any two versions (metric deltas,
@@ -25,7 +26,9 @@ function Delta({ base, compare }: { base: number; compare: number }) {
   return (
     <span className="font-mono text-micro text-charcoal">
       {sign}
-      {Number.isInteger(delta * 100) && Math.abs(delta) < 1 ? `${sign}${Math.round(delta * 100)} pts` : delta.toFixed(2)}
+      {Math.abs(delta) < 1 && Math.abs(delta * 100 - Math.round(delta * 100)) < 1e-6
+        ? `${sign}${Math.round(delta * 100)} pts`
+        : delta.toFixed(2)}
     </span>
   );
 }
@@ -379,7 +382,7 @@ export function EvalsPage() {
                 {versions.map((version: EvalSummaryRow) => (
                   <tr key={version.version} className="border-b border-hairline-soft last:border-b-0 hover:bg-surface">
                     <td className="px-4 py-2 font-mono text-body-sm text-ink">{version.label}</td>
-                    <td className="px-4 py-2 font-mono text-caption text-steel">{version.generatedAt}</td>
+                    <td className="px-4 py-2 font-mono text-caption text-steel">{formatDateTime(version.generatedAt)}</td>
                     <td
                       className="px-4 py-2 font-mono text-body-sm text-charcoal"
                       title="GET /api/evals - taskSuccessRate = successful conversations / total"

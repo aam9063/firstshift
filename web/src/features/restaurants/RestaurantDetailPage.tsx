@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, fetchRestaurantShifts } from "../../api/client";
 import type { RestaurantRow, ShiftRow } from "../../api/types";
+import { formatDate } from "../../lib/dates";
 
 /* Restaurant detail (specs/04b-console.md section 3.5, odd/tasks/console-views.md
    T1/S1): the open shifts list grouped by day, which candidate is matched to
@@ -9,16 +10,7 @@ import type { RestaurantRow, ShiftRow } from "../../api/types";
    count on GET /api/restaurants only, with no bench list endpoint, so the
    bench section renders the count and an honest empty state. */
 
-function dayLabel(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  });
-}
+const dayLabel = (iso: string): string => formatDate(iso);
 
 function ShiftRowView({ shift }: { shift: ShiftRow }) {
   return (
