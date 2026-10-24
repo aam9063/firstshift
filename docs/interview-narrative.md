@@ -76,9 +76,8 @@ engineer. I proposed a tool inside the platform that generates ready-to-
 download YAML files and can also import the ones that already exist. I did
 the technical spike and, working from detailed specs and acceptance criteria
 with an AI coding agent, built a fast prototype for my team and the client.
-The agent proposed and I decided: [OPEN: one real example of what the agent
-proposed that the author changed or rejected, and why]. When the client
-approved it I built the final version, checking everything against the
+The agent proposed and I decided what shipped. When the client approved it
+I built the final version, checking everything against the
 acceptance criteria, and shipped it to production through our Azure DevOps
 pipelines.
 
@@ -100,10 +99,6 @@ What transfers to FirstShift:
 - The lesson I carry: a fast prototype in front of the client is the quickest
   way to find the real requirement, and the AI accelerates you but your
   judgement is what makes the result good.
-
-> **Open item (author only):** the one sentence about what the AI coding
-> agent proposed and the author changed or rejected. Everything else in this
-> section comes from the author's own account.
 
 ## Relevance to the target company (public facts only)
 
