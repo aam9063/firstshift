@@ -189,7 +189,7 @@ describe("EvalsPage", () => {
     await screen.findAllByText("v2");
     expect(await screen.findByText(/Task success rate/)).toBeInTheDocument();
     // v2 (compare, 90%) against v1 (base, 100%): a minus 10 pt delta.
-    expect(screen.getAllByText(/-10/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("-10 pts").length).toBeGreaterThan(0);
   });
 
   it("shows the deterministic checks table per version", async () => {

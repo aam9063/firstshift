@@ -9,6 +9,7 @@ import {
 } from "../../api/client";
 import type { SimulatorMessage } from "../../api/types";
 import { useLiveEvents } from "../../api/useLiveEvents";
+import { formatDateTime } from "../../lib/dates";
 
 /* Simulator (specs/04b-console.md section 3.9, odd/tasks/console-views.md
    T5/S5): three panes (candidate phone, manager phone from the same outbound
@@ -99,7 +100,7 @@ function TimelinePane() {
           events.map((event) => (
             <li key={event.id} className="border-b border-hairline-soft pb-1.5 last:border-b-0">
               <p className="text-caption text-charcoal">
-                <span className="font-mono text-micro text-steel">{event.at} </span>
+                <span className="font-mono text-micro text-steel">{formatDateTime(event.at)} </span>
                 {event.summary}
               </p>
               <p className="font-mono text-micro text-stone">{event.actorLabel}</p>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchOverview } from "../../api/client";
 import type { ActivityItem, AttentionItem, CoverageRow, FunnelSummary } from "../../api/types";
 import { KpiTile } from "./KpiTile";
+import { formatDateTime } from "../../lib/dates";
 
 const ATTENTION_LABELS: Record<AttentionItem["kind"], string> = {
   sla_breach: "SLA BREACH",
@@ -182,7 +183,7 @@ export function OverviewPage() {
                 key={item.id}
                 className="flex items-start gap-3 border-b border-hairline-soft py-2.5 last:border-b-0"
               >
-                <span className="w-14 shrink-0 pt-0.5 font-mono text-micro text-stone">{item.at}</span>
+                <span className="w-14 shrink-0 pt-0.5 font-mono text-micro text-stone">{formatDateTime(item.at)}</span>
                 <span className="flex w-28 shrink-0 items-center gap-1.5 pt-0.5 text-body-sm text-charcoal">
                   <ActorDot type={item.actorType} />
                   {item.actorLabel}

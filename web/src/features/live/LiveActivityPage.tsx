@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { EventKind, LiveEvent } from "../../api/types";
 import { fetchLiveFeedMeta } from "../../api/client";
 import { useLiveEvents } from "../../api/useLiveEvents";
+import { formatDateTime } from "../../lib/dates";
 
 const KIND_LABELS: Record<EventKind, string> = {
   agent_turn: "agent.turn",
@@ -194,7 +195,7 @@ export function LiveActivityPage() {
                     aria-expanded={expanded}
                     className="grid w-full min-w-[620px] grid-cols-[80px_110px_130px_1fr_80px] items-center gap-2 px-4 py-2.5 text-left hover:bg-surface"
                   >
-                    <span className="font-mono text-micro text-stone">{event.at}</span>
+                    <span className="font-mono text-micro text-stone">{formatDateTime(event.at)}</span>
                     <span className="flex items-center gap-1.5 text-body-sm text-charcoal">
                       <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${actorColor(event.actorType)}`} />
                       {event.actorLabel}
