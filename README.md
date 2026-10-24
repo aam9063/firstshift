@@ -16,6 +16,35 @@ Fast-food hiring is not a screening problem. It is a **time-to-first-productive-
 
 The FDE role is about sitting with a client, understanding how work really happens, finding the leverage point nobody asked about, and shipping something that lives inside their workflows (not next to them). This repo documents every phase of that loop, with the evidence, so a reviewer can audit decisions, not just code.
 
+## Results (simulated pilot, day 30)
+
+Every number in this section is a **simulation outcome** produced by this repository's pipeline, eval harness and pilot simulator; nothing is a real-world effect. Sources: `docs/pilot-sim-day30.md`, `evals/reports/eval-v5.md`, `evals/reports/redteam-v1.md`, `docs/iteration-log.md`.
+
+- In the simulated day-30 pilot (seed 42), 726 pilot applications ran through the real pipeline against a statistical control arm: the simulated contact rate was 100% versus 58% in the control model, the median simulated application-to-first-shift proxy was 6.3 days versus 26.4 in the control, and 497 first shifts were worked.
+- In the same simulation, 156 simulated hires were scheduled and still did not show up on day 1, and 72 manager decision SLA breaches fired, which turned into concrete client decisions before any real candidate would be contacted.
+- Across the eval suite (44 synthetic personas), the simulated runs kept task success at 44 of 44 with 0 deterministic guardrail failures, and four measured iterations took four defects to 0 (identifier leaks, language drift, duplicate consent asks, multi-question messages).
+- The red-team suite ended 7 of 7 adversarial classes in the designed safe behavior, including prompt injection and an offer-without-approval attempt.
+- The control arm is a statistical model of the as-is funnel, not a run of real code; the candidate and manager sides are synthetic. Full caveats: `docs/pilot-sim-day30.md`.
+
+## What is stubbed
+
+The exists/stubbed/simulated table with evidence for every row is in `docs/handover.md`. The honest short version: the Twilio adapter is real code but WhatsApp template registration is a client setup step; all client systems are mocks; alerts are documented queries with no pager wired; the GDPR erasure tombstone and the first-shift day-before confirmation template are designed but not implemented; the eval judge is a deterministic stand-in plus one live-judge calibration that showed 17% exact agreement with human labels; there is no day-90 pilot report. The note under "Console UI status (F05)" below predates the console API feature; the current route-by-route status is the handover table.
+
+## Documentation
+
+| Doc | What it is |
+|---|---|
+| `docs/handover.md` | Handover pack: exists/stubbed/simulated table, run-test-evaluate-deploy in 10 commands, architecture, ranked risks, next features, ownership |
+| `docs/case-study.md` | The FDE case study: discovery, reframe, build, simulated results, next steps with a real client |
+| `docs/demo-video-notes.md` | Shot list for the 2-minute demo (D1, D4, D6) with voice-over and captions |
+| `docs/interview-narrative.md` | 30-second and 2-minute versions, Q&A, bridge placeholder |
+| `docs/integration-guide.md` | Ports, per-system contracts and the WhatsApp channel |
+| `docs/reliability.md` | Alerts, SLOs, degraded mode, and what is documented but not wired |
+| `docs/iteration-log.md` | The measured keep/revert log, one change per iteration |
+| `docs/pilot-sim-day30.md` | Simulated pilot day-30 ops review with caveats |
+
+The console runs at http://localhost:5173 (Overview, Live, Candidates, Restaurants, Ops, Evals, Compliance, Simulator); the API docs at http://localhost:8001/docs.
+
 ---
 
 ## Repository map
