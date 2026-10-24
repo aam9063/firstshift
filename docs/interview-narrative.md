@@ -62,12 +62,48 @@ first and treat judge scores as noise.
 
 ## Bridge to my real experience
 
-> **PLACEHOLDER: pending author input.** This section is deliberately empty.
-> Per the spec, it must connect this project to the author's real work using
-> only details the author confirms, and no details may be invented. When the
-> author supplies them, fill in: the engagement, the discovery-to-delivery
-> arc, direct client contact, the tooling and pipeline used, and what
-> transfers from the simulated engagement to the real one.
+At Softtek, a consultancy, one of my clients is a large IBEX 35 steel
+manufacturer digitising its R&D. I work on a computer vision project: the
+client's engineers train AI models with tools such as ClearML and Voxel51 to
+identify what a steel sheet is made of from a microscope image, and my team
+builds the frontend and backend platform around those models. They train the
+models; we build the platform they live in.
+
+Working with those engineers I saw how much time they lost entering
+hyperparameters by hand or writing YAML files manually. It was slow and
+repetitive, and it took them away from the work that actually needs an
+engineer. I proposed a tool inside the platform that generates ready-to-
+download YAML files and can also import the ones that already exist. I did
+the technical spike and, working from detailed specs and acceptance criteria
+with an AI coding agent, built a fast prototype for my team and the client.
+The agent proposed and I decided: [OPEN: one real example of what the agent
+proposed that the author changed or rejected, and why]. When the client
+approved it I built the final version, checking everything against the
+acceptance criteria, and shipped it to production through our Azure DevOps
+pipelines.
+
+The client liked the prototype and asked for more functionality than I had
+planned, so the final tool ended up bigger than the first plan. It is fully
+integrated in the platform and the client's engineers use it today; the
+client has also confirmed plans for similar tools elsewhere in the
+application.
+
+What transfers to FirstShift:
+
+- I found the real need by watching users work, not by reading a ticket,
+  which is exactly what the discovery phase of this repository simulates.
+- I shipped an internal tool end to end, from spike to production, with
+  direct client contact and a CI/CD pipeline.
+- I used AI to accelerate implementation while the decisions, the acceptance
+  criteria and the final review stayed mine, the same ODD discipline this
+  repository is built with: specs first, AI proposes, the human decides.
+- The lesson I carry: a fast prototype in front of the client is the quickest
+  way to find the real requirement, and the AI accelerates you but your
+  judgement is what makes the result good.
+
+> **Open item (author only):** the one sentence about what the AI coding
+> agent proposed and the author changed or rejected. Everything else in this
+> section comes from the author's own account.
 
 ## Relevance to the target company (public facts only)
 
