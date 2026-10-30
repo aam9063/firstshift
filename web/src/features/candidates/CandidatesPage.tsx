@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ApiError, fetchCandidates } from "../../api/client";
 import type { CandidateListItem, SlaRisk } from "../../api/types";
+import { formatDateTime } from "../../lib/dates";
 
 /* Candidates list (specs/04b-console.md section 3.3, odd/tasks/console-live.md
    T3): real rows from GET /api/candidates. Each row links to the candidate
@@ -34,19 +35,6 @@ function StateChip({ label }: { label: string }) {
   );
 }
 
-function formatLastActivity(iso: string): string {
-  if (!iso) return "never";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const clock = date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  });
-  const day = date.toISOString().slice(0, 10);
-  return `${day} ${clock} UTC`;
-}
 
 function CandidatesTable({ items }: { items: CandidateListItem[] }) {
   return (
@@ -93,7 +81,7 @@ function CandidatesTable({ items }: { items: CandidateListItem[] }) {
                   {candidate.languages.join(", ")}
                 </td>
                 <td className="px-4 py-2.5 text-body-sm text-charcoal">
-                  {formatLastActivity(candidate.lastActivityAt)}
+                  {formatDateTime(candidate.lastActivityAt)}
                   {candidate.elapsedLabel ? (
                     <p className="font-mono text-micro text-stone">{candidate.elapsedLabel}</p>
                   ) : null}

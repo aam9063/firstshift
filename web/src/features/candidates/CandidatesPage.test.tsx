@@ -68,7 +68,7 @@ describe("CandidatesPage", () => {
     expect(screen.getByText("Lumbre Burger Sol")).toBeInTheDocument();
     expect(screen.getAllByText("pilot").length).toBeGreaterThan(0);
     expect(screen.getByText("es")).toBeInTheDocument();
-    expect(screen.getByText("2026-10-23 05:26 UTC")).toBeInTheDocument();
+    expect(screen.getByText(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/)).toBeInTheDocument();
     expect(screen.getByText(/At risk/)).toBeInTheDocument();
     expect(screen.getByText("+34 ***** 794")).toBeInTheDocument();
   });

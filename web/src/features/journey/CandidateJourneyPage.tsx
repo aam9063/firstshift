@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { fetchCandidate } from "../../api/client";
 import type { CandidateDetail, JourneyStep, RecordRow, ThreadMessage } from "../../api/types";
+import { formatDateTime } from "../../lib/dates";
 
 /* Actor colors per specs/04b-console.md section 4.3: agent blue, human orange,
    system steel. Color never carries meaning alone: every chip has a label. */
@@ -36,7 +37,7 @@ function JourneyTimeline({ steps, elapsedLabel }: { steps: JourneyStep[]; elapse
             <div className="min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="text-body-sm-medium text-ink">{step.label}</span>
-                <span className="font-mono text-micro text-stone">{step.at}</span>
+                <span className="font-mono text-micro text-stone">{formatDateTime(step.at)}</span>
               </div>
               <p className="text-micro text-steel">
                 {step.actorLabel} - {step.note}
@@ -82,7 +83,7 @@ function Message({ message }: { message: ThreadMessage }) {
         {!isCandidate && message.agentVersion && (
           <span className="font-mono text-brand-tag">{message.agentVersion}</span>
         )}
-        <span className="font-mono">{message.at}</span>
+        <span className="font-mono">{formatDateTime(message.at)}</span>
         {isCandidate && <span className="font-mono">Ines</span>}
       </div>
       <div
